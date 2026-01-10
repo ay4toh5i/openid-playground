@@ -1,0 +1,27 @@
+{
+  "imports": {
+    "@hono/react-renderer": "npm:@hono/react-renderer@latest",
+    "honox/client": "npm:honox@0.1.53/client",
+    "honox/factory": "npm:honox@0.1.53/factory",
+    "honox/server": "npm:honox@0.1.53/server",
+    "hono/dev": "npm:hono@4.4.12/dev",
+    "react": "npm:react@19.0.0",
+    "react-dom/client": "npm:react-dom@19.0.0/client"
+  },
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react"
+  },
+  "fmt": {
+    "exclude": [".vite"]
+  },
+  "nodeModulesDir": "auto",
+  "tasks": {
+    "fmt": "deno fmt",
+    "lint": "deno lint",
+    "dev": "deno run -A npm:vite",
+    "build": "deno run -A npm:vite build",
+    "preview": "deno run -A npm:vite preview",
+    "start": "deno run -A npm:vite preview"
+  }
+}
