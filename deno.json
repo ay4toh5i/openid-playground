@@ -1,0 +1,28 @@
+{
+  "tasks": {
+    "dev": "deno run -A npm:vite",
+    "build": "dneo run -A npm:vite build --mode client && deno run -A npm:vite build",
+    "preview": "(cd dist && deno serve -R index.js)"
+  },
+  "imports": {
+    "@deno/vite-plugin": "npm:@deno/vite-plugin@^1.0.6",
+    "@hono/vite-build": "npm:@hono/vite-build@^1.10.1",
+    "@hono/vite-dev-server": "npm:@hono/vite-dev-server@^0.25.1",
+    "hono": "npm:hono@^4.12.8",
+    "honox": "npm:honox@^0.1.55",
+    "vite": "npm:vite@^7.3"
+  },
+  "exclude": [
+    "dist"
+  ],
+  "compilerOptions": {
+    "lib": [
+      "esnext",
+      "dom",
+      "deno.ns",
+      "deno.unstable"
+    ],
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx"
+  }
+}

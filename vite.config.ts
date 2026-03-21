@@ -1,16 +1,22 @@
-import build from '@hono/vite-build/cloudflare-workers'
-import adapter from '@hono/vite-dev-server/cloudflare'
-import tailwindcss from '@tailwindcss/vite'
-import honox from 'honox/vite'
-import { defineConfig } from 'vite'
+import deno from "@deno/vite-plugin";
+import build from "@hono/vite-build/deno";
+import adapter from "@hono/vite-dev-server/node";
+import honox from "honox/vite";
+import { defineConfig } from "vite";
 
 export default defineConfig({
+  cacheDir: "node_modules/.vite",
+  ssr: { external: ["react", "react-dom"] },
+  esbuild: {
+    jsx: "automatic",
+    jsxImportSource: "hono/jsx",
+  },
   plugins: [
+    deno(),
     honox({
       devServer: { adapter },
-      client: { input: ['/app/client.ts', '/app/style.css'] }
+      client: { input: ["/app/client.ts", "/app/style.css"] },
     }),
-    tailwindcss(),
-    build()
-  ]
-})
+    build(),
+  ],
+});

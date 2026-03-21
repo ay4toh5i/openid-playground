@@ -15,5 +15,4 @@ create-hono version 0.19.4
 ✔ Directory not empty. Continue? Yes
 ✔ Do you want to install project dependencies? No
 ✔ Cloning the template
-
 ```
