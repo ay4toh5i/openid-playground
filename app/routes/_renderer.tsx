@@ -1,17 +1,19 @@
-import { jsxRenderer } from 'hono/jsx-renderer'
-import { Link, Script } from 'honox/server'
+import { reactRenderer } from "@hono/react-renderer";
 
-export default jsxRenderer(({ children }) => {
+export default reactRenderer(({ children, title }) => {
   return (
     <html lang="en">
       <head>
-        <meta charset="utf-8" />
+        <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link rel="icon" href="/favicon.ico" />
-        <Link href="/app/style.css" rel="stylesheet" />
-        <Script src="/app/client.ts" async />
+        {import.meta.env.PROD ? (
+          <script type="module" src="/static/client.js"></script>
+        ) : (
+          <script type="module" src="/app/client.ts"></script>
+        )}
+        {title ? <title>{title}</title> : ""}
       </head>
       <body>{children}</body>
     </html>
-  )
-})
+  );
+});

@@ -1,8 +1,16 @@
-import type {} from 'hono'
+import type {} from "hono";
 
-declare module 'hono' {
+declare module "hono" {
   interface Env {
-    Variables: {}
-    Bindings: {}
+    Variables: {};
+    Bindings: {};
+  }
+}
+
+import "@hono/react-renderer";
+
+declare module "@hono/react-renderer" {
+  interface Props {
+    title?: string;
   }
 }
