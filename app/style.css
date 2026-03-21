@@ -1,1 +1,93 @@
-@import "tailwindcss" source("../app");
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
+@import "@mantine/core/styles.css";
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: #eef1f5;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 96px 260px minmax(0, 1fr) minmax(0, 360px);
+  min-height: 100vh;
+  background: #eef1f5;
+  color: var(--mantine-color-dark-9);
+}
+
+.app-rail {
+  grid-row: 1 / -1;
+  background: linear-gradient(180deg, #1d2230, #141820);
+  color: #f5f6f8;
+  border-right: 1px solid #2b313d;
+}
+
+.app-nav {
+  grid-row: 1 / -1;
+  background: #f4f6f9;
+  border-right: 1px solid #dfe3ea;
+}
+
+.app-main {
+  background: #eef1f5;
+}
+
+.app-detail {
+  background: #f7f8fb;
+  border-left: 1px solid #dfe3ea;
+}
+
+.curl-block {
+  background: #0b1c2c;
+  color: #e3f2ff;
+  border: 1px solid #17324a;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+.url-block {
+  background: #f3f5f9;
+  color: #1d2230;
+  border: 1px solid #d6dbe5;
+}
+
+.flow-card {
+  background: #ffffff;
+  border: 1px solid #e1e6ef;
+}
+
+@media (max-width: 1200px) {
+  .app-shell {
+    grid-template-columns: 80px 220px minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+  }
+
+  .app-detail {
+    grid-column: 3;
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 960px) {
+  .app-shell {
+    grid-template-columns: 72px 1fr;
+    grid-template-rows: auto auto 1fr;
+  }
+
+  .app-nav {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .app-main {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .app-detail {
+    grid-column: 2;
+    grid-row: 3;
+  }
+}

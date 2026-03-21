@@ -1,17 +1,28 @@
-import { jsxRenderer } from "hono/jsx-renderer";
+import { reactRenderer } from "@hono/react-renderer";
 import { Link, Script } from "honox/server";
-
-export default jsxRenderer(({ children }) => {
+import { MantineProvider } from "@mantine/core";
+export default reactRenderer(({ children }) => {
   return (
     <html lang="en">
       <head>
-        <meta charset="utf-8" />
+        <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="icon" href="/favicon.ico" />
         <Link href="/app/style.css" rel="stylesheet" />
-        <Script src="/app/client.ts" async />
+        <Script src="/app/client.tsx" async />
       </head>
-      <body>{children}</body>
+      <body>
+        <MantineProvider
+          defaultColorScheme="light"
+          theme={{
+            primaryColor: "dark",
+            fontFamily: "\"Space Grotesk\", \"Segoe UI\", sans-serif",
+            primaryShade: 9,
+          }}
+        >
+          {children}
+        </MantineProvider>
+      </body>
     </html>
   );
 });

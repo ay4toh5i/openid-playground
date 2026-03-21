@@ -12,17 +12,24 @@
     "lint:fix": "oxlint --fix"
   },
   "dependencies": {
+    "@hono/react-renderer": "^1.0.1",
+    "@mantine/core": "^8.3.18",
+    "@mantine/hooks": "^8.3.18",
+    "@tabler/icons-react": "^3.40.0",
     "hono": "^4.11.3",
-    "honox": "0.1.52"
+    "honox": "0.1.52",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-hook-form": "^7.71.2"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250214.0",
     "@hono/vite-build": "^1.3.0",
     "@hono/vite-dev-server": "^0.18.2",
-    "@tailwindcss/vite": "^4.0.9",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "oxfmt": "^0.23.0",
     "oxlint": "^1.38.0",
-    "tailwindcss": "^4.0.9",
     "vite": "^6.3.5",
     "wrangler": "^4.4.0"
   }
