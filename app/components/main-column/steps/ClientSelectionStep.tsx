@@ -1,77 +1,58 @@
 /**
- * Client selection step
+ * Client selection step - props-based, no context
  */
-import { Paper, Select, Text, Stack, Badge } from "@mantine/core";
-import { usePlayground } from "../../../hooks/usePlaygroundState";
-import { ClientConfigStorage, fetchProviderMetadata } from "../../../lib/storage/client-config";
+import { Paper, Select, Text, Stack } from "@mantine/core";
 import { useState, useEffect } from "react";
+import {
+  ClientConfigStorage,
+  fetchProviderMetadata,
+  type ClientConfig,
+  type OIDCProviderMetadata,
+} from "../../../lib/storage/client-config";
 
 const LAST_SELECTED_CLIENT_KEY = "oidc_last_selected_client";
 
-export function ClientSelectionStep() {
-  const { state, dispatch } = usePlayground();
-  const [clients, setClients] = useState(ClientConfigStorage.getAll());
+interface ClientSelectionStepProps {
+  onClientSelected: (client: ClientConfig, metadata: OIDCProviderMetadata) => void;
+  onError: (error: string) => void;
+}
+
+export function ClientSelectionStep({ onClientSelected, onError }: ClientSelectionStepProps) {
+  const [clients] = useState(() => ClientConfigStorage.getAll());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Auto-select last used or first client on mount - legitimate data fetching useEffect
   useEffect(() => {
-    const loadedClients = ClientConfigStorage.getAll();
-    setClients(loadedClients);
-
-    if (loadedClients.length > 0 && !selectedId && state.currentStep <= 1) {
-      // Auto-select: last selected or first client
-      const lastSelectedId = localStorage.getItem(LAST_SELECTED_CLIENT_KEY);
-      const clientToSelect = lastSelectedId
-        ? loadedClients.find((c) => c.id === lastSelectedId) || loadedClients[0]
-        : loadedClients[0];
-
-      if (clientToSelect) {
-        setSelectedId(clientToSelect.id);
-        handleClientSelect(clientToSelect.id);
-      }
+    if (clients.length === 0) return;
+    const lastSelectedId = localStorage.getItem(LAST_SELECTED_CLIENT_KEY);
+    const initialClient =
+      (lastSelectedId ? clients.find((c) => c.id === lastSelectedId) : null) ?? clients[0];
+    if (initialClient) {
+      handleSelect(initialClient.id);
     }
   }, []);
 
-  const handleClientSelect = async (clientId: string | null) => {
-    if (!clientId) return;
-
+  const handleSelect = async (clientId: string) => {
     const client = clients.find((c) => c.id === clientId);
     if (!client) return;
 
+    setSelectedId(clientId);
     setLoading(true);
     try {
-      // Fetch provider metadata if not cached
       let metadata = client.metadata;
       if (!metadata) {
         metadata = await fetchProviderMetadata(client.issuer);
-        // Update client with metadata
         ClientConfigStorage.save({ ...client, metadata });
       }
-
-      // Save last selected client
       localStorage.setItem(LAST_SELECTED_CLIENT_KEY, clientId);
-
-      dispatch({ type: "SELECT_CLIENT", payload: { ...client, metadata } });
-      dispatch({ type: "SET_PROVIDER_METADATA", payload: metadata });
-
-      // Auto-advance to next step
-      if (state.currentStep === 1) {
-        dispatch({ type: "ADVANCE_STEP" });
-      }
+      onClientSelected({ ...client, metadata }, metadata);
     } catch (error) {
-      dispatch({
-        type: "SET_ERROR",
-        payload: error instanceof Error ? error.message : "Failed to fetch provider metadata",
-      });
+      onError(
+        error instanceof Error ? error.message : "Failed to fetch provider metadata"
+      );
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleChange = (value: string | null) => {
-    setSelectedId(value);
-    if (value) {
-      handleClientSelect(value);
     }
   };
 
@@ -95,7 +76,9 @@ export function ClientSelectionStep() {
         placeholder="Choose a client"
         data={clients.map((c) => ({ value: c.id, label: `${c.name} (${c.issuer})` }))}
         value={selectedId}
-        onChange={handleChange}
+        onChange={(value) => {
+          if (value) handleSelect(value);
+        }}
         disabled={loading}
       />
     </Paper>

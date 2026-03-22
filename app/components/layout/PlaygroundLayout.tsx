@@ -1,17 +1,32 @@
 /**
- * 4-column playground layout
+ * 4-column playground layout (props-based, no context)
  */
 import { Grid, useMantineColorScheme } from "@mantine/core";
+import type { FlowType, TokenResponseData, AuthorizationRequestData } from "../../lib/flow-types";
+import type { OIDCProviderMetadata } from "../../lib/storage/client-config";
 import { IconsPanel } from "../icons-column/IconsPanel";
 import { FlowSelector } from "../flows-column/FlowSelector";
-import { FlowTimeline } from "../main-column/FlowTimeline";
 import { InspectorPanel } from "../inspector-column/InspectorPanel";
+import type { ReactNode } from "react";
 
-export function PlaygroundLayout() {
+interface PlaygroundLayoutProps {
+  currentFlow: FlowType | null;
+  children: ReactNode;
+  tokenResponse?: TokenResponseData | null;
+  providerMetadata?: OIDCProviderMetadata | null;
+  authRequest?: AuthorizationRequestData | null;
+}
+
+export function PlaygroundLayout({
+  currentFlow,
+  children,
+  tokenResponse,
+  providerMetadata,
+  authRequest,
+}: PlaygroundLayoutProps) {
   const { colorScheme } = useMantineColorScheme();
-  const borderColor = colorScheme === 'dark'
-    ? 'rgba(255, 255, 255, 0.08)'
-    : 'rgba(0, 0, 0, 0.08)';
+  const borderColor =
+    colorScheme === "dark" ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)";
 
   return (
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
@@ -41,7 +56,7 @@ export function PlaygroundLayout() {
             overflowY: "auto",
           }}
         >
-          <FlowSelector />
+          <FlowSelector currentFlow={currentFlow} />
         </Grid.Col>
 
         {/* Main Column - Flexible */}
@@ -54,7 +69,7 @@ export function PlaygroundLayout() {
             overflowY: "auto",
           }}
         >
-          <FlowTimeline />
+          {children}
         </Grid.Col>
 
         {/* Inspector Column - ~350px */}
@@ -67,7 +82,11 @@ export function PlaygroundLayout() {
             overflowY: "auto",
           }}
         >
-          <InspectorPanel />
+          <InspectorPanel
+            tokenResponse={tokenResponse ?? null}
+            providerMetadata={providerMetadata ?? null}
+            authRequest={authRequest ?? null}
+          />
         </Grid.Col>
       </Grid>
     </div>

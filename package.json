@@ -20,12 +20,13 @@
     "jose": "^5.10.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-hook-form": "^7.71.2"
+    "react-hook-form": "^7.71.2",
+    "shiki": "^4.0.2"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250214.0",
-    "@hono/vite-build": "^1.3.0",
-    "@hono/vite-dev-server": "^0.18.2",
+    "@hono/vite-build": "^1.10.1",
+    "@hono/vite-dev-server": "^0.18.3",
     "@tailwindcss/vite": "^4.0.9",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -33,7 +34,7 @@
     "oxlint": "^1.56.0",
     "oxlint-tsgolint": "^0.17.1",
     "tailwindcss": "^4.0.9",
-    "vite": "^6.3.5",
+    "vite": "^7.3.1",
     "wrangler": "^4.4.0"
   }
 }

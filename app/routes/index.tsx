@@ -1,6 +1,11 @@
 import { createRoute } from "honox/factory";
-import Playground from "../islands/playground";
 
 export default createRoute((c) => {
-  return c.render(<Playground />, { title: "OAuth/OIDC Playground" });
+  return c.html(
+    `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>OAuth/OIDC Playground</title></head>` +
+    `<body><script>` +
+    `var f=localStorage.getItem('oidc-playground-last-flow')||'authorization-code';` +
+    `location.replace('/flows/'+f);` +
+    `<\/script></body></html>`
+  );
 });

@@ -1,11 +1,9 @@
 /**
  * Client configuration manager island
+ * No inner MantineProvider - expects to be rendered within a flow island's MantineProvider
  */
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
-  MantineProvider,
-  localStorageColorSchemeManager,
-  createTheme,
   Stack,
   Card,
   Text,
@@ -21,39 +19,21 @@ import {
 } from "@mantine/core";
 import { useForm } from "react-hook-form";
 import { IconTrash, IconEdit, IconPlus } from "@tabler/icons-react";
-import { ClientConfigStorage, fetchProviderMetadata, type ClientConfig } from "../lib/storage/client-config";
-
-const colorSchemeManager = localStorageColorSchemeManager({
-  key: "oidc-playground-color-scheme",
-});
-
-const theme = createTheme({
-  colors: {
-    dark: [
-      '#C1C2C5',
-      '#A6A7AB',
-      '#909296',
-      '#5c5f66',
-      '#373A40',
-      '#2C2E33',
-      '#25262b',
-      '#1A1B1E',
-      '#141517',
-      '#101113',
-    ],
-  },
-  defaultGradient: {
-    from: 'blue',
-    to: 'cyan',
-    deg: 45,
-  },
-});
+import {
+  ClientConfigStorage,
+  fetchProviderMetadata,
+  type ClientConfig,
+} from "../lib/storage/client-config";
 
 type ClientFormData = {
   name: string;
   issuer: string;
   clientId: string;
-  clientAuthenticationMethod: "none" | "client_secret_basic" | "client_secret_post" | "private_key_jwt";
+  clientAuthenticationMethod:
+    | "none"
+    | "client_secret_basic"
+    | "client_secret_post"
+    | "private_key_jwt";
   clientSecret?: string;
   privateKey?: string;
 };
@@ -63,8 +43,7 @@ interface ClientConfigManagerProps {
 }
 
 export default function ClientConfigManager({ onClose }: ClientConfigManagerProps = {}) {
-  const [mounted, setMounted] = useState(false);
-  const [clients, setClients] = useState<ClientConfig[]>([]);
+  const [clients, setClients] = useState<ClientConfig[]>(() => ClientConfigStorage.getAll());
   const [modalOpened, setModalOpened] = useState(false);
   const [editingClient, setEditingClient] = useState<ClientConfig | null>(null);
   const [loading, setLoading] = useState(false);
@@ -77,14 +56,7 @@ export default function ClientConfigManager({ onClose }: ClientConfigManagerProp
 
   const authMethod = watch("clientAuthenticationMethod");
 
-  useEffect(() => {
-    setMounted(true);
-    loadClients();
-  }, []);
-
-  const loadClients = () => {
-    setClients(ClientConfigStorage.getAll());
-  };
+  const refreshClients = () => setClients(ClientConfigStorage.getAll());
 
   const openAddModal = () => {
     setEditingClient(null);
@@ -106,8 +78,8 @@ export default function ClientConfigManager({ onClose }: ClientConfigManagerProp
       issuer: client.issuer,
       clientId: client.clientId,
       clientAuthenticationMethod: client.clientAuthenticationMethod,
-      clientSecret: client.clientSecret || "",
-      privateKey: client.privateKey || "",
+      clientSecret: client.clientSecret ?? "",
+      privateKey: client.privateKey ?? "",
     });
     setModalOpened(true);
   };
@@ -115,9 +87,7 @@ export default function ClientConfigManager({ onClose }: ClientConfigManagerProp
   const onSubmit = async (data: ClientFormData) => {
     setLoading(true);
     try {
-      // Fetch provider metadata
       const metadata = await fetchProviderMetadata(data.issuer);
-
       const clientData = {
         name: data.name,
         issuer: data.issuer,
@@ -127,17 +97,17 @@ export default function ClientConfigManager({ onClose }: ClientConfigManagerProp
         privateKey: data.privateKey,
         metadata,
       };
-
       if (editingClient) {
         ClientConfigStorage.save({ ...clientData, id: editingClient.id } as ClientConfig);
       } else {
         ClientConfigStorage.save(clientData);
       }
-
-      loadClients();
+      refreshClients();
       setModalOpened(false);
     } catch (error) {
-      alert(`Failed to save client: ${error instanceof Error ? error.message : "Unknown error"}`);
+      alert(
+        `Failed to save client: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     } finally {
       setLoading(false);
     }
@@ -146,19 +116,14 @@ export default function ClientConfigManager({ onClose }: ClientConfigManagerProp
   const handleDelete = (id: string) => {
     if (confirm("Are you sure you want to delete this client configuration?")) {
       ClientConfigStorage.delete(id);
-      loadClients();
+      refreshClients();
     }
   };
 
-  if (!mounted) {
-    return <div style={{ minHeight: "100vh", padding: "2rem" }}>Loading...</div>;
-  }
-
   return (
-    <MantineProvider theme={theme} colorSchemeManager={colorSchemeManager} defaultColorScheme="light">
-      <div style={{ padding: "24px" }}>
-        <Stack gap="lg">
-          <Group justify="space-between">
+    <div style={{ padding: "24px" }}>
+      <Stack gap="lg">
+        <Group justify="space-between">
           <div>
             <Title order={3}>OAuth Client Configurations</Title>
             <Text size="sm" c="dimmed" mt="xs">
@@ -233,7 +198,12 @@ export default function ClientConfigManager({ onClose }: ClientConfigManagerProp
       >
         <form onSubmit={handleSubmit(onSubmit)}>
           <Stack gap="md">
-            <TextInput label="Name" {...register("name")} required placeholder="My OAuth Client" />
+            <TextInput
+              label="Name"
+              {...register("name")}
+              required
+              placeholder="My OAuth Client"
+            />
 
             <TextInput
               label="Issuer URL"
@@ -291,7 +261,6 @@ export default function ClientConfigManager({ onClose }: ClientConfigManagerProp
           </Stack>
         </form>
       </Modal>
-      </div>
-    </MantineProvider>
+    </div>
   );
 }

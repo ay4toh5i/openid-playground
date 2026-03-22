@@ -1,5 +1,6 @@
 /**
- * Authorization flow operations hook
+ * Authorization flow operations - pure functions for OAuth/OIDC flows
+ * Client assembles the full token request; server only proxies to token endpoint.
  */
 import { generatePKCEPair } from "../lib/crypto/pkce";
 import type {
@@ -7,8 +8,10 @@ import type {
   AuthorizationCallbackData,
   TokenResponseData,
   TokenErrorData,
-} from "./usePlaygroundState";
+} from "../lib/flow-types";
 import type { ClientConfig } from "../lib/storage/client-config";
+
+export { generatePKCEPair };
 
 /**
  * Generate a random state parameter for CSRF protection
@@ -50,15 +53,10 @@ export function buildAuthorizationUrl(
     scope: request.scope,
   });
 
-  // Required/recommended parameters
   if (request.state) params.append("state", request.state);
   if (request.nonce) params.append("nonce", request.nonce);
-
-  // PKCE parameters
   if (request.code_challenge) params.append("code_challenge", request.code_challenge);
   if (request.code_challenge_method) params.append("code_challenge_method", request.code_challenge_method);
-
-  // Optional parameters
   if (request.response_mode) params.append("response_mode", request.response_mode);
   if (request.display) params.append("display", request.display);
   if (request.prompt) params.append("prompt", request.prompt);
@@ -68,8 +66,6 @@ export function buildAuthorizationUrl(
   if (request.login_hint) params.append("login_hint", request.login_hint);
   if (request.acr_values) params.append("acr_values", request.acr_values);
   if (request.resource) params.append("resource", request.resource);
-
-  // Custom parameters
   if (request.customParams) {
     Object.entries(request.customParams).forEach(([key, value]) => {
       if (value) params.append(key, value);
@@ -102,25 +98,17 @@ export async function startAuthorizationRequest(
       return;
     }
 
-    // Listen for postMessage from callback page
     const messageHandler = (event: MessageEvent) => {
-      // Verify origin matches current origin
-      if (event.origin !== window.location.origin) {
-        return;
-      }
-
-      // Check if this is an OAuth callback message
+      if (event.origin !== window.location.origin) return;
       if (event.data && event.data.type === "oauth_callback") {
         window.removeEventListener("message", messageHandler);
         popup.close();
-
         const callbackData: AuthorizationCallbackData = {
           code: event.data.code,
           state: event.data.state,
           error: event.data.error,
           error_description: event.data.error_description,
         };
-
         if (callbackData.error) {
           reject(new Error(callbackData.error_description || callbackData.error));
         } else {
@@ -131,7 +119,6 @@ export async function startAuthorizationRequest(
 
     window.addEventListener("message", messageHandler);
 
-    // Check if popup was closed without completing auth
     const checkClosed = setInterval(() => {
       if (popup.closed) {
         clearInterval(checkClosed);
@@ -140,6 +127,66 @@ export async function startAuthorizationRequest(
       }
     }, 500);
   });
+}
+
+/**
+ * Build form body and auth headers for token endpoint request.
+ * Client auth credentials are assembled here (not on the server).
+ */
+function buildTokenRequest(
+  client: ClientConfig,
+  params: Record<string, string | undefined>
+): { headers: Record<string, string>; body: string } {
+  const form = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== "") form.set(key, value);
+  }
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/x-www-form-urlencoded",
+  };
+
+  if (client.clientAuthenticationMethod === "client_secret_basic" && client.clientSecret) {
+    // RFC 6749 §2.3.1: encode client_id and client_secret per application/x-www-form-urlencoded
+    const credentials = `${encodeURIComponent(client.clientId)}:${encodeURIComponent(client.clientSecret)}`;
+    headers["Authorization"] = `Basic ${btoa(credentials)}`;
+  } else {
+    form.set("client_id", client.clientId);
+    if (client.clientAuthenticationMethod === "client_secret_post" && client.clientSecret) {
+      form.set("client_secret", client.clientSecret);
+    }
+  }
+
+  return { headers, body: form.toString() };
+}
+
+/**
+ * Send a pre-built token request through the server proxy.
+ * Server only forwards; all auth assembly is done client-side.
+ */
+async function proxyTokenRequest(
+  tokenEndpoint: string,
+  client: ClientConfig,
+  params: Record<string, string | undefined>
+): Promise<TokenResponseData | TokenErrorData> {
+  try {
+    const { headers, body } = buildTokenRequest(client, params);
+    const response = await fetch("/api/token-proxy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tokenEndpoint, headers, body }),
+    });
+    const data = await response.json() as Record<string, unknown>;
+    if (!response.ok || data["error"]) {
+      return data as unknown as TokenErrorData;
+    }
+    return data as unknown as TokenResponseData;
+  } catch (error) {
+    return {
+      error: "network_error",
+      error_description: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
 }
 
 /**
@@ -152,37 +199,12 @@ export async function exchangeCodeForToken(
   redirectUri: string,
   codeVerifier?: string
 ): Promise<TokenResponseData | TokenErrorData> {
-  try {
-    const response = await fetch("/api/token-exchange", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        tokenEndpoint,
-        client,
-        tokenRequest: {
-          grant_type: "authorization_code",
-          code,
-          redirect_uri: redirectUri,
-          code_verifier: codeVerifier,
-        },
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || data.error) {
-      return data as TokenErrorData;
-    }
-
-    return data as TokenResponseData;
-  } catch (error) {
-    return {
-      error: "network_error",
-      error_description: error instanceof Error ? error.message : "Unknown error occurred",
-    };
-  }
+  return proxyTokenRequest(tokenEndpoint, client, {
+    grant_type: "authorization_code",
+    code,
+    redirect_uri: redirectUri,
+    code_verifier: codeVerifier,
+  });
 }
 
 /**
@@ -194,36 +216,11 @@ export async function requestClientCredentialsToken(
   scope?: string,
   resource?: string | string[]
 ): Promise<TokenResponseData | TokenErrorData> {
-  try {
-    const response = await fetch("/api/token-exchange", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        tokenEndpoint,
-        client,
-        tokenRequest: {
-          grant_type: "client_credentials",
-          scope,
-          resource,
-        },
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || data.error) {
-      return data as TokenErrorData;
-    }
-
-    return data as TokenResponseData;
-  } catch (error) {
-    return {
-      error: "network_error",
-      error_description: error instanceof Error ? error.message : "Unknown error occurred",
-    };
-  }
+  return proxyTokenRequest(tokenEndpoint, client, {
+    grant_type: "client_credentials",
+    scope,
+    resource: Array.isArray(resource) ? resource.join(" ") : resource,
+  });
 }
 
 /**
@@ -235,50 +232,9 @@ export async function refreshAccessToken(
   refreshToken: string,
   scope?: string
 ): Promise<TokenResponseData | TokenErrorData> {
-  try {
-    const response = await fetch("/api/token-exchange", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        tokenEndpoint,
-        client,
-        tokenRequest: {
-          grant_type: "refresh_token",
-          refresh_token: refreshToken,
-          scope,
-        },
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || data.error) {
-      return data as TokenErrorData;
-    }
-
-    return data as TokenResponseData;
-  } catch (error) {
-    return {
-      error: "network_error",
-      error_description: error instanceof Error ? error.message : "Unknown error occurred",
-    };
-  }
-}
-
-/**
- * Authorization flow hook for easy integration
- */
-export function useAuthorizationFlow() {
-  return {
-    generateState,
-    generateNonce,
-    generatePKCEPair,
-    buildAuthorizationUrl,
-    startAuthorizationRequest,
-    exchangeCodeForToken,
-    requestClientCredentialsToken,
-    refreshAccessToken,
-  };
+  return proxyTokenRequest(tokenEndpoint, client, {
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+    scope,
+  });
 }

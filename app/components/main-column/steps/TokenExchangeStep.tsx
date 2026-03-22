@@ -1,119 +1,94 @@
 /**
- * Token exchange step
+ * Token exchange step - exchanges authorization code for tokens
  */
-import { Paper, Stack, Text, Code, Button, Switch } from "@mantine/core";
-import { usePlayground } from "../../../hooks/usePlaygroundState";
-import { useAuthorizationFlow } from "../../../hooks/useAuthorizationFlow";
-import { useState, useEffect } from "react";
+import { Paper, Button, Stack, Text, Switch } from "@mantine/core";
+import { useState, useEffect, useRef } from "react";
+import { exchangeCodeForToken } from "../../../hooks/useAuthorizationFlow";
+import type { ClientConfig } from "../../../lib/storage/client-config";
+import type { TokenResponseData, TokenErrorData } from "../../../lib/flow-types";
 
-const AUTO_EXCHANGE_KEY = "oidc_auto_exchange_token";
+interface TokenExchangeStepProps {
+  client: ClientConfig | null;
+  tokenEndpoint: string | null | undefined;
+  code: string | null | undefined;
+  redirectUri: string;
+  codeVerifier?: string;
+  onTokenReceived: (token: TokenResponseData) => void;
+  onTokenError: (error: TokenErrorData) => void;
+}
 
-export function TokenExchangeStep() {
-  const { state, dispatch } = usePlayground();
-  const { exchangeCodeForToken } = useAuthorizationFlow();
+export function TokenExchangeStep({
+  client,
+  tokenEndpoint,
+  code,
+  redirectUri,
+  codeVerifier,
+  onTokenReceived,
+  onTokenError,
+}: TokenExchangeStepProps) {
   const [loading, setLoading] = useState(false);
-  const [autoExchange, setAutoExchange] = useState(() => {
-    const saved = localStorage.getItem(AUTO_EXCHANGE_KEY);
-    return saved === "true";
-  });
-
-  // Auto-exchange if enabled and callback received
-  useEffect(() => {
-    if (
-      autoExchange &&
-      state.authCallback?.code &&
-      !state.tokenResponse &&
-      !loading
-    ) {
-      handleExchange();
-    }
-  }, [autoExchange, state.authCallback]);
+  const [autoExecute, setAutoExecute] = useState(false);
+  const executedRef = useRef(false);
 
   const handleExchange = async () => {
-    if (!state.selectedClient || !state.providerMetadata || !state.authCallback) {
-      return;
-    }
-
+    if (!client || !tokenEndpoint || !code) return;
     setLoading(true);
-    try {
-      const redirectUri = `${window.location.origin}/callback`;
-      const tokenResponse = await exchangeCodeForToken(
-        state.providerMetadata.token_endpoint,
-        state.selectedClient,
-        state.authCallback.code,
-        redirectUri,
-        state.pkce?.verifier
-      );
-
-      dispatch({ type: "SET_TOKEN_RESPONSE", payload: tokenResponse });
-      dispatch({ type: "ADVANCE_STEP" });
-    } catch (error) {
-      dispatch({
-        type: "SET_ERROR",
-        payload: error instanceof Error ? error.message : "Token exchange failed",
-      });
-    } finally {
-      setLoading(false);
+    const result = await exchangeCodeForToken(tokenEndpoint, client, code, redirectUri, codeVerifier);
+    setLoading(false);
+    if ("error" in result) {
+      onTokenError(result);
+    } else {
+      onTokenReceived(result);
     }
   };
 
-  const handleAutoExchangeToggle = (checked: boolean) => {
-    setAutoExchange(checked);
-    localStorage.setItem(AUTO_EXCHANGE_KEY, String(checked));
-  };
+  // Auto-execute when code arrives and autoExecute is enabled
+  useEffect(() => {
+    if (autoExecute && code && client && tokenEndpoint && !executedRef.current) {
+      executedRef.current = true;
+      handleExchange();
+    }
+  }, [code, autoExecute]);
 
-  if (!state.authCallback?.code) {
+  // Reset execution guard when code changes
+  useEffect(() => {
+    executedRef.current = false;
+  }, [code]);
+
+  if (!client || !tokenEndpoint) {
     return (
       <Paper p="md" mt="sm" withBorder>
-        <Text size="sm" c="dimmed">
-          Waiting for authorization callback...
-        </Text>
+        <Text size="sm" c="dimmed">Complete the previous steps to exchange for tokens.</Text>
       </Paper>
     );
   }
 
-  const tokenRequest = {
-    grant_type: "authorization_code",
-    code: state.authCallback?.code,
-    redirect_uri: `${window.location.origin}/callback`,
-    ...(state.pkce?.verifier && { code_verifier: state.pkce.verifier }),
-  };
-
-  const authMethod = state.selectedClient?.clientAuthenticationMethod || "none";
+  if (!code) {
+    return (
+      <Paper p="md" mt="sm" withBorder>
+        <Stack gap="sm">
+          <Switch
+            label="Auto-execute when code arrives"
+            checked={autoExecute}
+            onChange={(e) => setAutoExecute(e.currentTarget.checked)}
+          />
+          <Text size="sm" c="dimmed">Waiting for authorization code...</Text>
+        </Stack>
+      </Paper>
+    );
+  }
 
   return (
     <Paper p="md" mt="sm" withBorder>
-      <Stack gap="md">
+      <Stack gap="sm">
         <Switch
-          label="Auto-exchange authorization code"
-          description="Automatically exchange code for tokens when callback is received"
-          checked={autoExchange}
-          onChange={(event) => handleAutoExchangeToggle(event.currentTarget.checked)}
+          label="Auto-execute when code arrives"
+          checked={autoExecute}
+          onChange={(e) => setAutoExecute(e.currentTarget.checked)}
         />
-
-        <div>
-          <Text size="sm" fw={500} mb="xs">
-            Token Endpoint:
-          </Text>
-          <Code block>{state.providerMetadata?.token_endpoint}</Code>
-        </div>
-
-        <div>
-          <Text size="sm" fw={500} mb="xs">
-            Request Body:
-          </Text>
-          <Code block>{JSON.stringify(tokenRequest, null, 2)}</Code>
-        </div>
-
-        <div>
-          <Text size="sm" fw={500} mb="xs">
-            Client Authentication Method:
-          </Text>
-          <Code>{authMethod}</Code>
-        </div>
-
-        <Button onClick={handleExchange} loading={loading} disabled={!!state.tokenResponse}>
-          {state.tokenResponse ? "✓ Token Exchanged" : "Exchange Code for Tokens"}
+        <Text size="sm" c="dimmed">Authorization code received. Click to exchange for tokens.</Text>
+        <Button onClick={handleExchange} loading={loading}>
+          Exchange for Token
         </Button>
       </Stack>
     </Paper>

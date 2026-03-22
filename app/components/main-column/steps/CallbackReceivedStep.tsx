@@ -1,41 +1,28 @@
 /**
- * Callback received step
+ * Callback received step - props-based, derives stateValid during render
+ * No useEffect or auto-advance
  */
-import { Paper, Stack, Text, Code, Button, Group, Badge, Alert } from "@mantine/core";
-import { IconCheck, IconAlertCircle } from "@tabler/icons-react";
-import { usePlayground } from "../../../hooks/usePlaygroundState";
+import { Paper, Stack, Text, Code, Group, Badge, Alert } from "@mantine/core";
+import { IconAlertCircle } from "@tabler/icons-react";
 import { CopyButton } from "../../common/CopyButton";
-import { useEffect, useState } from "react";
+import type { AuthorizationCallbackData } from "../../../lib/flow-types";
 
-export function CallbackReceivedStep() {
-  const { state, dispatch } = usePlayground();
-  const [stateValid, setStateValid] = useState<boolean | null>(null);
+interface CallbackReceivedStepProps {
+  callback: AuthorizationCallbackData | null;
+  expectedState?: string;
+}
 
-  useEffect(() => {
-    if (state.authCallback?.code) {
-      // Verify state parameter
-      if (state.authRequest?.state && state.authCallback.state) {
-        const isValid = state.authRequest.state === state.authCallback.state;
-        setStateValid(isValid);
-      }
-
-      // Auto-advance after a brief moment if state is valid
-      const timer = setTimeout(() => {
-        dispatch({ type: "ADVANCE_STEP" });
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [state.authCallback, dispatch]);
-
-  if (!state.authCallback) {
+export function CallbackReceivedStep({ callback, expectedState }: CallbackReceivedStepProps) {
+  if (!callback) {
     return (
       <Paper p="md" mt="sm" withBorder>
-        <Text size="sm" c="dimmed">
-          Waiting for authorization callback...
-        </Text>
+        <Text size="sm" c="dimmed">Waiting for authorization callback...</Text>
       </Paper>
     );
   }
+
+  const stateValid =
+    expectedState && callback.state ? expectedState === callback.state : null;
 
   return (
     <Paper p="md" mt="sm" withBorder>
@@ -51,9 +38,9 @@ export function CallbackReceivedStep() {
             <Text size="sm" fw={500}>
               Authorization Code:
             </Text>
-            <CopyButton value={state.authCallback.code || ""} label="Copy code" />
+            <CopyButton value={callback.code ?? ""} label="Copy code" />
           </Group>
-          <Code block>{state.authCallback.code}</Code>
+          <Code block>{callback.code}</Code>
         </div>
 
         <div>
@@ -62,11 +49,15 @@ export function CallbackReceivedStep() {
               <Text size="sm" fw={500}>
                 State:
               </Text>
-              {stateValid && <Badge color="green" size="xs">✓ Valid</Badge>}
+              {stateValid && (
+                <Badge color="green" size="xs">
+                  ✓ Valid
+                </Badge>
+              )}
             </Group>
-            <CopyButton value={state.authCallback.state || ""} label="Copy state" />
+            <CopyButton value={callback.state ?? ""} label="Copy state" />
           </Group>
-          <Code block>{state.authCallback.state}</Code>
+          <Code block>{callback.state}</Code>
         </div>
       </Stack>
     </Paper>

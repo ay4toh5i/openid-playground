@@ -1,39 +1,34 @@
 /**
- * Flow selector with flow type cards
+ * Flow selector with navigation links
  */
 import { Stack, Card, Text, Badge } from "@mantine/core";
-import { usePlayground, type FlowType } from "../../hooks/usePlaygroundState";
+import type { FlowType } from "../../lib/flow-types";
 
 interface FlowCardProps {
-  type: FlowType;
+  href?: string;
   title: string;
   description: string;
-  disabled?: boolean;
+  isActive?: boolean;
   comingSoon?: boolean;
 }
 
-function FlowCard({ type, title, description, disabled, comingSoon }: FlowCardProps) {
-  const { state, dispatch } = usePlayground();
-  const isSelected = state.selectedFlow === type;
-
-  const handleClick = () => {
-    if (disabled || comingSoon) return;
-    dispatch({ type: "SELECT_FLOW", payload: type });
-  };
-
+function FlowCard({ href, title, description, isActive, comingSoon }: FlowCardProps) {
+  const isClickable = !!href && !comingSoon;
   return (
     <Card
+      component={isClickable ? "a" : "div"}
+      href={isClickable ? href : undefined}
       padding="sm"
       radius="md"
       withBorder
       style={{
-        cursor: disabled || comingSoon ? "not-allowed" : "pointer",
-        opacity: disabled || comingSoon ? 0.5 : 1,
-        borderColor: isSelected ? "var(--mantine-color-blue-6)" : undefined,
-        borderWidth: isSelected ? 2 : 1,
-        backgroundColor: isSelected ? "var(--mantine-color-blue-0)" : undefined,
+        cursor: comingSoon ? "not-allowed" : isClickable ? "pointer" : "default",
+        opacity: comingSoon ? 0.5 : 1,
+        borderColor: isActive ? "var(--mantine-color-blue-6)" : undefined,
+        borderWidth: isActive ? 2 : 1,
+        backgroundColor: isActive ? "var(--mantine-color-blue-0)" : undefined,
+        textDecoration: "none",
       }}
-      onClick={handleClick}
     >
       <Stack gap="xs">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
@@ -54,7 +49,7 @@ function FlowCard({ type, title, description, disabled, comingSoon }: FlowCardPr
   );
 }
 
-export function FlowSelector() {
+export function FlowSelector({ currentFlow }: { currentFlow: FlowType | null }) {
   return (
     <Stack gap="sm">
       <Text size="xs" fw={600} c="dimmed" tt="uppercase">
@@ -62,25 +57,27 @@ export function FlowSelector() {
       </Text>
 
       <FlowCard
-        type="authorization_code"
+        href="/flows/authorization-code"
+        isActive={currentFlow === "authorization_code"}
         title="Authorization Code"
         description="Standard flow with code exchange and PKCE"
       />
 
       <FlowCard
-        type="client_credentials"
+        href="/flows/client-credentials"
+        isActive={currentFlow === "client_credentials"}
         title="Client Credentials"
         description="Machine-to-machine authentication"
       />
 
       <FlowCard
-        type="refresh_token"
+        href="/flows/refresh-token"
+        isActive={currentFlow === "refresh_token"}
         title="Refresh Token"
         description="Obtain new access token using refresh token"
       />
 
       <FlowCard
-        type={null}
         title="Device Code"
         description="Flow for devices with limited input"
         comingSoon

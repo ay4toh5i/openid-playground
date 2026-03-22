@@ -1,37 +1,85 @@
 /**
- * Token response step
+ * Token response step - props-based, displays token response, no state or context
  */
-import { Paper, Stack, Code, Button, Text, Group } from "@mantine/core";
-import { usePlayground } from "../../../hooks/usePlaygroundState";
+import { Paper, Stack, Text, Code, Button, Group } from "@mantine/core";
 import { CopyButton } from "../../common/CopyButton";
+import { CodeBlock } from "../../common/CodeBlock";
+import type { TokenResponseData } from "../../../lib/flow-types";
 
-export function TokenResponseStep() {
-  const { state, dispatch } = usePlayground();
+interface TokenResponseStepProps {
+  tokenResponse: TokenResponseData | null;
+  onReset?: () => void;
+}
 
-  if (!state.tokenResponse) {
-    return null;
+export function TokenResponseStep({ tokenResponse, onReset }: TokenResponseStepProps) {
+  if (!tokenResponse) {
+    return (
+      <Paper p="md" mt="sm" withBorder>
+        <Text size="sm" c="dimmed">Waiting for token response...</Text>
+      </Paper>
+    );
   }
 
   return (
     <Paper p="md" mt="sm" withBorder>
       <Stack gap="md">
+        <Text size="sm" c="green" fw={500}>
+          Tokens received successfully!
+        </Text>
+
+        {tokenResponse.id_token && (
+          <div>
+            <Group justify="space-between" mb="xs">
+              <Text size="xs" fw={500}>ID Token:</Text>
+              <CopyButton value={tokenResponse.id_token} label="Copy" />
+            </Group>
+            <Code
+              block
+              style={{ fontSize: "11px", wordBreak: "break-all", maxHeight: "100px", overflowY: "auto" }}
+            >
+              {tokenResponse.id_token}
+            </Code>
+          </div>
+        )}
+
         <div>
           <Group justify="space-between" mb="xs">
-            <Text size="sm" fw={500}>
-              Token Response:
-            </Text>
-            <CopyButton
-              value={JSON.stringify(state.tokenResponse, null, 2)}
-              label="Copy response"
-            />
+            <Text size="xs" fw={500}>Access Token:</Text>
+            <CopyButton value={tokenResponse.access_token} label="Copy" />
           </Group>
-          <Code block style={{ fontSize: "11px", overflowY: "auto", maxHeight: "400px" }}>
-            {JSON.stringify(state.tokenResponse, null, 2)}
+          <Code
+            block
+            style={{ fontSize: "11px", wordBreak: "break-all", maxHeight: "100px", overflowY: "auto" }}
+          >
+            {tokenResponse.access_token}
           </Code>
         </div>
-        <Button variant="light" onClick={() => dispatch({ type: "RESET_FLOW" })}>
-          Reset Flow
-        </Button>
+
+        {tokenResponse.refresh_token && (
+          <div>
+            <Group justify="space-between" mb="xs">
+              <Text size="xs" fw={500}>Refresh Token:</Text>
+              <CopyButton value={tokenResponse.refresh_token} label="Copy" />
+            </Group>
+            <Code
+              block
+              style={{ fontSize: "11px", wordBreak: "break-all", maxHeight: "100px", overflowY: "auto" }}
+            >
+              {tokenResponse.refresh_token}
+            </Code>
+          </div>
+        )}
+
+        <div>
+          <Text size="xs" fw={500} mb="xs">Full Token Response:</Text>
+          <CodeBlock code={JSON.stringify(tokenResponse, null, 2)} lang="json" />
+        </div>
+
+        {onReset && (
+          <Button variant="light" onClick={onReset}>
+            Start Over
+          </Button>
+        )}
       </Stack>
     </Paper>
   );

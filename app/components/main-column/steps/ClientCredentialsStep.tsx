@@ -1,56 +1,57 @@
 /**
- * Client Credentials flow step
+ * Client Credentials flow step - props-based, no context
  */
-import { Paper, TextInput, Button, Stack, Textarea } from "@mantine/core";
+import { Paper, TextInput, Button, Stack, Text } from "@mantine/core";
 import { useForm } from "react-hook-form";
-import { usePlayground } from "../../../hooks/usePlaygroundState";
-import { useAuthorizationFlow } from "../../../hooks/useAuthorizationFlow";
 import { useState } from "react";
+import { requestClientCredentialsToken } from "../../../hooks/useAuthorizationFlow";
+import type { ClientConfig } from "../../../lib/storage/client-config";
+import type { TokenResponseData, TokenErrorData } from "../../../lib/flow-types";
 
 interface ClientCredentialsFormData {
   scope?: string;
   resource?: string;
 }
 
-export function ClientCredentialsStep() {
-  const { state, dispatch } = usePlayground();
-  const { requestClientCredentialsToken } = useAuthorizationFlow();
-  const [loading, setLoading] = useState(false);
+interface ClientCredentialsStepProps {
+  client: ClientConfig | null;
+  tokenEndpoint: string | null | undefined;
+  onTokenReceived: (token: TokenResponseData) => void;
+  onTokenError: (error: TokenErrorData) => void;
+}
 
+export function ClientCredentialsStep({
+  client,
+  tokenEndpoint,
+  onTokenReceived,
+  onTokenError,
+}: ClientCredentialsStepProps) {
+  const [loading, setLoading] = useState(false);
   const { register, handleSubmit } = useForm<ClientCredentialsFormData>({
-    defaultValues: {
-      scope: "",
-      resource: "",
-    },
+    defaultValues: { scope: "", resource: "" },
   });
 
+  if (!client || !tokenEndpoint) {
+    return (
+      <Paper p="md" mt="sm" withBorder>
+        <Text size="sm" c="dimmed">Complete the previous step to request a token.</Text>
+      </Paper>
+    );
+  }
+
   const onSubmit = async (data: ClientCredentialsFormData) => {
-    if (!state.selectedClient || !state.providerMetadata?.token_endpoint) {
-      return;
-    }
-
     setLoading(true);
-    try {
-      const result = await requestClientCredentialsToken(
-        state.providerMetadata.token_endpoint,
-        state.selectedClient,
-        data.scope || undefined,
-        data.resource || undefined
-      );
-
-      if ("error" in result) {
-        dispatch({ type: "SET_TOKEN_ERROR", payload: result });
-      } else {
-        dispatch({ type: "SET_TOKEN_RESPONSE", payload: result });
-        dispatch({ type: "ADVANCE_STEP" });
-      }
-    } catch (error) {
-      dispatch({
-        type: "SET_ERROR",
-        payload: error instanceof Error ? error.message : "Failed to request token",
-      });
-    } finally {
-      setLoading(false);
+    const result = await requestClientCredentialsToken(
+      tokenEndpoint,
+      client,
+      data.scope || undefined,
+      data.resource || undefined
+    );
+    setLoading(false);
+    if ("error" in result) {
+      onTokenError(result);
+    } else {
+      onTokenReceived(result);
     }
   };
 

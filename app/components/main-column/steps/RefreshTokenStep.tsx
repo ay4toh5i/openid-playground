@@ -1,56 +1,58 @@
 /**
- * Refresh Token flow step
+ * Refresh Token flow step - props-based, no context
  */
 import { Paper, Textarea, TextInput, Button, Stack, Text } from "@mantine/core";
 import { useForm } from "react-hook-form";
-import { usePlayground } from "../../../hooks/usePlaygroundState";
-import { useAuthorizationFlow } from "../../../hooks/useAuthorizationFlow";
 import { useState } from "react";
+import { refreshAccessToken } from "../../../hooks/useAuthorizationFlow";
+import type { ClientConfig } from "../../../lib/storage/client-config";
+import type { TokenResponseData, TokenErrorData } from "../../../lib/flow-types";
 
 interface RefreshTokenFormData {
   refreshToken: string;
   scope?: string;
 }
 
-export function RefreshTokenStep() {
-  const { state, dispatch } = usePlayground();
-  const { refreshAccessToken } = useAuthorizationFlow();
-  const [loading, setLoading] = useState(false);
+interface RefreshTokenStepProps {
+  client: ClientConfig | null;
+  tokenEndpoint: string | null | undefined;
+  onTokenReceived: (token: TokenResponseData) => void;
+  onTokenError: (error: TokenErrorData) => void;
+}
 
-  const { register, handleSubmit, setValue } = useForm<RefreshTokenFormData>({
-    defaultValues: {
-      refreshToken: state.tokenResponse?.refresh_token || "",
-      scope: "",
-    },
+export function RefreshTokenStep({
+  client,
+  tokenEndpoint,
+  onTokenReceived,
+  onTokenError,
+}: RefreshTokenStepProps) {
+  const [loading, setLoading] = useState(false);
+  const { register, handleSubmit } = useForm<RefreshTokenFormData>({
+    defaultValues: { refreshToken: "", scope: "" },
   });
 
+  if (!client || !tokenEndpoint) {
+    return (
+      <Paper p="md" mt="sm" withBorder>
+        <Text size="sm" c="dimmed">Complete the previous steps to use refresh token.</Text>
+      </Paper>
+    );
+  }
+
   const onSubmit = async (data: RefreshTokenFormData) => {
-    if (!state.selectedClient || !state.providerMetadata?.token_endpoint) {
-      return;
-    }
-
+    if (!data.refreshToken.trim()) return;
     setLoading(true);
-    try {
-      const result = await refreshAccessToken(
-        state.providerMetadata.token_endpoint,
-        state.selectedClient,
-        data.refreshToken,
-        data.scope || undefined
-      );
-
-      if ("error" in result) {
-        dispatch({ type: "SET_TOKEN_ERROR", payload: result });
-      } else {
-        dispatch({ type: "SET_TOKEN_RESPONSE", payload: result });
-        dispatch({ type: "ADVANCE_STEP" });
-      }
-    } catch (error) {
-      dispatch({
-        type: "SET_ERROR",
-        payload: error instanceof Error ? error.message : "Failed to refresh token",
-      });
-    } finally {
-      setLoading(false);
+    const result = await refreshAccessToken(
+      tokenEndpoint,
+      client,
+      data.refreshToken,
+      data.scope || undefined
+    );
+    setLoading(false);
+    if ("error" in result) {
+      onTokenError(result);
+    } else {
+      onTokenReceived(result);
     }
   };
 
@@ -58,25 +60,20 @@ export function RefreshTokenStep() {
     <Paper p="md" mt="sm" withBorder>
       <form onSubmit={handleSubmit(onSubmit)}>
         <Stack gap="md">
-          {state.tokenResponse?.refresh_token && (
-            <Text size="xs" c="dimmed">
-              Using refresh token from previous flow
-            </Text>
-          )}
           <Textarea
             label="Refresh Token"
             {...register("refreshToken")}
             required
-            minRows={3}
-            placeholder="Enter refresh token"
+            minRows={2}
+            placeholder="Enter your refresh token"
           />
           <TextInput
-            label="Scope (Optional)"
+            label="Scope (optional)"
             {...register("scope")}
-            placeholder="Must be subset of original scope"
+            placeholder="Optional: different scopes"
           />
           <Button type="submit" loading={loading}>
-            Refresh Access Token
+            Refresh Token
           </Button>
         </Stack>
       </form>

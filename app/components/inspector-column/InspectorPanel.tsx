@@ -1,15 +1,20 @@
 /**
- * Inspector panel for token inspection
+ * Inspector panel for token inspection (props-based, no context)
  */
 import { Stack, Text, Paper, Divider } from "@mantine/core";
-import { usePlayground } from "../../hooks/usePlaygroundState";
+import type { TokenResponseData, AuthorizationRequestData } from "../../lib/flow-types";
+import type { OIDCProviderMetadata } from "../../lib/storage/client-config";
 import { JwtInspector } from "./JwtInspector";
 import { detectTokenType } from "../../lib/jwt/decoder";
 
-export function InspectorPanel() {
-  const { state } = usePlayground();
+interface InspectorPanelProps {
+  tokenResponse: TokenResponseData | null;
+  providerMetadata: OIDCProviderMetadata | null;
+  authRequest: AuthorizationRequestData | null;
+}
 
-  if (!state.tokenResponse) {
+export function InspectorPanel({ tokenResponse, providerMetadata, authRequest }: InspectorPanelProps) {
+  if (!tokenResponse) {
     return (
       <Paper p="md" withBorder radius="md" style={{ textAlign: "center" }}>
         <Text size="sm" c="dimmed">
@@ -22,9 +27,9 @@ export function InspectorPanel() {
     );
   }
 
-  const { id_token, access_token } = state.tokenResponse;
-  const jwksUri = state.providerMetadata?.jwks_uri;
-  const expectedNonce = state.authRequest?.nonce;
+  const { id_token, access_token } = tokenResponse;
+  const jwksUri = providerMetadata?.jwks_uri;
+  const expectedNonce = authRequest?.nonce;
 
   return (
     <Stack gap="md">
@@ -34,7 +39,12 @@ export function InspectorPanel() {
 
       {id_token && (
         <>
-          <JwtInspector token={id_token} label="ID Token" jwksUri={jwksUri} expectedNonce={expectedNonce} />
+          <JwtInspector
+            token={id_token}
+            label="ID Token"
+            jwksUri={jwksUri}
+            expectedNonce={expectedNonce}
+          />
           {access_token && <Divider />}
         </>
       )}
@@ -58,7 +68,7 @@ export function InspectorPanel() {
         </>
       )}
 
-      {state.tokenResponse.refresh_token && (
+      {tokenResponse.refresh_token && (
         <>
           <Divider />
           <Stack gap="sm">
@@ -67,14 +77,14 @@ export function InspectorPanel() {
             </Text>
             <Paper p="sm" withBorder>
               <Text size="xs" style={{ wordBreak: "break-all" }}>
-                {state.tokenResponse.refresh_token}
+                {tokenResponse.refresh_token}
               </Text>
             </Paper>
           </Stack>
         </>
       )}
 
-      {state.tokenResponse.expires_in && (
+      {tokenResponse.expires_in && (
         <>
           <Divider />
           <Stack gap="xs">
@@ -82,14 +92,14 @@ export function InspectorPanel() {
               Token Metadata
             </Text>
             <Text size="xs">
-              <strong>Token Type:</strong> {state.tokenResponse.token_type}
+              <strong>Token Type:</strong> {tokenResponse.token_type}
             </Text>
             <Text size="xs">
-              <strong>Expires In:</strong> {state.tokenResponse.expires_in} seconds
+              <strong>Expires In:</strong> {tokenResponse.expires_in} seconds
             </Text>
-            {state.tokenResponse.scope && (
+            {tokenResponse.scope && (
               <Text size="xs">
-                <strong>Scope:</strong> {state.tokenResponse.scope}
+                <strong>Scope:</strong> {tokenResponse.scope}
               </Text>
             )}
           </Stack>

@@ -1,58 +1,68 @@
 /**
- * Authorization execution step
+ * Authorization execution step - props-based, no context
  */
-import { Paper, Button, Stack, Code, Text, Group } from "@mantine/core";
-import { usePlayground } from "../../../hooks/usePlaygroundState";
-import { useAuthorizationFlow } from "../../../hooks/useAuthorizationFlow";
-import { CopyButton } from "../../common/CopyButton";
+import { Paper, Button, Stack, Text, Group } from "@mantine/core";
 import { useState } from "react";
+import { buildAuthorizationUrl, startAuthorizationRequest } from "../../../hooks/useAuthorizationFlow";
+import { CopyButton } from "../../common/CopyButton";
+import { CodeBlock } from "../../common/CodeBlock";
+import type { ClientConfig, OIDCProviderMetadata } from "../../../lib/storage/client-config";
+import type { AuthorizationRequestData, AuthorizationCallbackData } from "../../../lib/flow-types";
 
-export function AuthorizationExecuteStep() {
-  const { state, dispatch } = usePlayground();
-  const { buildAuthorizationUrl, startAuthorizationRequest } = useAuthorizationFlow();
+interface AuthorizationExecuteStepProps {
+  client: ClientConfig | null;
+  metadata: OIDCProviderMetadata | null;
+  authRequest: AuthorizationRequestData | null;
+  redirectUri: string;
+  onCallbackReceived: (callback: AuthorizationCallbackData) => void;
+  onError: (error: string) => void;
+}
+
+export function AuthorizationExecuteStep({
+  client,
+  metadata,
+  authRequest,
+  redirectUri,
+  onCallbackReceived,
+  onError,
+}: AuthorizationExecuteStepProps) {
   const [loading, setLoading] = useState(false);
 
-  if (!state.selectedClient || !state.providerMetadata || !state.authRequest) {
-    return null;
+  if (!client || !metadata?.authorization_endpoint || !authRequest) {
+    return (
+      <Paper p="md" mt="sm" withBorder>
+        <Text size="sm" c="dimmed">Complete the previous steps to execute authorization.</Text>
+      </Paper>
+    );
   }
 
-  const redirectUri = `${window.location.origin}/callback`;
   const authUrl = buildAuthorizationUrl(
-    state.providerMetadata.authorization_endpoint,
-    state.selectedClient.clientId,
+    metadata.authorization_endpoint,
+    client.clientId,
     redirectUri,
-    state.authRequest
+    authRequest
   );
+
+  const formatAuthUrl = (url: string) => {
+    const [baseUrl, queryString] = url.split("?");
+    if (!queryString) return url;
+    const params = queryString.split("&");
+    return `${baseUrl}?\n  ${params.join("\n  &")}`;
+  };
 
   const handleExecute = async () => {
     setLoading(true);
     try {
       const callback = await startAuthorizationRequest(authUrl);
-
-      // Verify state matches
-      if (callback.state !== state.authRequest?.state) {
+      if (callback.state !== authRequest.state) {
         throw new Error("State mismatch - possible CSRF attack");
       }
-
-      dispatch({ type: "SET_AUTH_CALLBACK", payload: callback });
-      dispatch({ type: "ADVANCE_STEP" });
+      onCallbackReceived(callback);
     } catch (error) {
-      dispatch({
-        type: "SET_ERROR",
-        payload: error instanceof Error ? error.message : "Authorization failed",
-      });
+      onError(error instanceof Error ? error.message : "Authorization failed");
     } finally {
       setLoading(false);
     }
-  };
-
-  // Format URL with line breaks for better readability
-  const formatAuthUrl = (url: string) => {
-    const [baseUrl, queryString] = url.split("?");
-    if (!queryString) return url;
-
-    const params = queryString.split("&");
-    return `${baseUrl}?\n  ${params.join("\n  &")}`;
   };
 
   return (
@@ -65,9 +75,7 @@ export function AuthorizationExecuteStep() {
             </Text>
             <CopyButton value={authUrl} label="Copy URL" />
           </Group>
-          <Code block style={{ fontSize: "11px", overflowX: "auto", whiteSpace: "pre-wrap" }}>
-            {formatAuthUrl(authUrl)}
-          </Code>
+          <CodeBlock code={formatAuthUrl(authUrl)} lang="text" />
         </div>
         <Button onClick={handleExecute} loading={loading}>
           Open Authorization Page
