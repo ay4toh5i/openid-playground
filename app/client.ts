@@ -1,4 +1,5 @@
 import { createClient } from "honox/client";
+import "@mantine/core/styles.css";
 
 createClient({
   hydrate: async (elem, root) => {

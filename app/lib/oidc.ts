@@ -1,4 +1,4 @@
-type OIDCProviderMetadata = {
+export type OIDCProviderMetadata = {
   /**
    * REQUIRED. URL using the https scheme with no query or fragment components that the OP asserts as its Issuer Identifier.
    * If Issuer discovery is supported, this value MUST be identical to the issuer value returned by WebFinger.
@@ -208,13 +208,13 @@ type OIDCProviderMetadata = {
   op_tos_uri?: string;
 };
 
-type ClietnAuthenticationMethod =
+export type ClientAuthenticationMethod =
   | "none"
   | "client_secret_basic"
   | "client_secret_post"
   | "private_key_jwt";
 
-type Client =
+export type Client =
   | {
       clientId: string;
       clientAuthenticationMethod: "none";
@@ -230,7 +230,7 @@ type Client =
       privateKey: string;
     };
 
-type AuthorizationRequest = {
+export type AuthorizationRequest = {
   /**
    * REQUIRED. OpenID Connect requests MUST contain the openid scope value.
    * Other scope values MAY be present.
@@ -343,7 +343,7 @@ type AuthorizationRequest = {
 /**
  * Token Request using Authorization Code Grant
  */
-type AuthorizationCodeTokenRequest = {
+export type AuthorizationCodeTokenRequest = {
   /**
    * REQUIRED. Value must be "authorization_code".
    */
@@ -398,7 +398,7 @@ type AuthorizationCodeTokenRequest = {
 /**
  * Token Request using Refresh Token Grant
  */
-type RefreshTokenRequest = {
+export type RefreshTokenRequest = {
   /**
    * REQUIRED. Value must be "refresh_token".
    */
@@ -448,7 +448,7 @@ type RefreshTokenRequest = {
 /**
  * Token Request using Client Credentials Grant
  */
-type ClientCredentialsTokenRequest = {
+export type ClientCredentialsTokenRequest = {
   /**
    * REQUIRED. Value must be "client_credentials".
    */
@@ -495,7 +495,7 @@ type ClientCredentialsTokenRequest = {
 /**
  * Token Request - Union of all grant types
  */
-type TokenRequest =
+export type TokenRequest =
   | AuthorizationCodeTokenRequest
   | RefreshTokenRequest
   | ClientCredentialsTokenRequest;
@@ -503,7 +503,7 @@ type TokenRequest =
 /**
  * Successful Token Response (OAuth 2.0)
  */
-type TokenResponse = {
+export type TokenResponse = {
   /**
    * REQUIRED. The access token issued by the authorization server.
    */
@@ -536,7 +536,7 @@ type TokenResponse = {
 /**
  * Successful Token Response for OpenID Connect
  */
-type OpenIDConnectTokenResponse = TokenResponse & {
+export type OpenIDConnectTokenResponse = TokenResponse & {
   /**
    * REQUIRED. ID Token value associated with the authenticated session.
    * The ID Token is a security token that contains Claims about the Authentication of an End-User by an Authorization Server.
@@ -547,7 +547,7 @@ type OpenIDConnectTokenResponse = TokenResponse & {
 /**
  * Token Error Response
  */
-type TokenErrorResponse = {
+export type TokenErrorResponse = {
   /**
    * REQUIRED. A single ASCII error code.
    * Values include:
