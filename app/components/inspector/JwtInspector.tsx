@@ -1,7 +1,3 @@
-/**
- * JWT inspector with header, payload, and signature tabs
- * Uses useMemo for sync decode, useEffect only for async verify and timer
- */
 import { Tabs, Stack, Badge, Text } from "@mantine/core";
 import { useMemo, useState, useEffect } from "react";
 import { decodeJWT, verifyJWT, isJWTExpired, getTimeUntilExpiration } from "../../lib/jwt/decoder";
@@ -24,18 +20,19 @@ export function JwtInspector({ token, label, jwksUri, expectedNonce }: JwtInspec
   }, [token]);
 
   const isExpired = decoded ? isJWTExpired(decoded.payload) : false;
-  const nonceValid =
-    decoded && expectedNonce ? decoded.payload.nonce === expectedNonce : null;
+  const nonceValid = decoded && expectedNonce ? decoded.payload.nonce === expectedNonce : null;
 
   // Async signature verification - legitimate useEffect (external system)
   const [verified, setVerified] = useState<boolean | null>(null);
   const [verifyError, setVerifyError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!jwksUri || !decoded) return;
+    if (!jwksUri || !decoded) {
+      return;
+    }
     setVerified(null);
     setVerifyError(null);
-    verifyJWT(token, jwksUri).then((result) => {
+    void verifyJWT(token, jwksUri).then((result) => {
       setVerified(result.verified);
       setVerifyError(result.error ?? null);
     });
@@ -43,12 +40,14 @@ export function JwtInspector({ token, label, jwksUri, expectedNonce }: JwtInspec
 
   // Timer countdown - legitimate useEffect (subscription to time)
   const [timeLeft, setTimeLeft] = useState<number | null>(() =>
-    decoded ? getTimeUntilExpiration(decoded.payload) : null
+    decoded ? getTimeUntilExpiration(decoded.payload) : null,
   );
 
   useEffect(() => {
     const exp = decoded?.payload.exp;
-    if (!exp) return;
+    if (!exp) {
+      return;
+    }
     const interval = setInterval(() => {
       setTimeLeft(getTimeUntilExpiration(decoded.payload));
     }, 1000);
@@ -56,7 +55,11 @@ export function JwtInspector({ token, label, jwksUri, expectedNonce }: JwtInspec
   }, [decoded?.payload.exp]);
 
   if (!decoded) {
-    return <Text size="sm" c="dimmed">Failed to decode JWT</Text>;
+    return (
+      <Text size="sm" c="dimmed">
+        Failed to decode JWT
+      </Text>
+    );
   }
 
   return (
@@ -73,9 +76,7 @@ export function JwtInspector({ token, label, jwksUri, expectedNonce }: JwtInspec
         {nonceValid === true && <Badge color="green">Nonce Valid</Badge>}
         {nonceValid === false && <Badge color="red">Nonce Mismatch</Badge>}
         {isExpired && <Badge color="red">Expired</Badge>}
-        {!isExpired && timeLeft !== null && (
-          <Badge color="blue">Expires in {timeLeft}s</Badge>
-        )}
+        {!isExpired && timeLeft !== null && <Badge color="blue">Expires in {timeLeft}s</Badge>}
       </div>
 
       <Tabs defaultValue="payload">
@@ -101,17 +102,19 @@ export function JwtInspector({ token, label, jwksUri, expectedNonce }: JwtInspec
             </Text>
             {!!decoded.payload.iss && (
               <Text size="xs">
-                <strong>Issuer:</strong> {String(decoded.payload.iss)}
+                <strong>Issuer:</strong> {JSON.stringify(decoded.payload.iss).replace(/^"|"$/g, "")}
               </Text>
             )}
             {!!decoded.payload.sub && (
               <Text size="xs">
-                <strong>Subject:</strong> {String(decoded.payload.sub)}
+                <strong>Subject:</strong>{" "}
+                {JSON.stringify(decoded.payload.sub).replace(/^"|"$/g, "")}
               </Text>
             )}
             {!!decoded.payload.aud && (
               <Text size="xs">
-                <strong>Audience:</strong> {String(decoded.payload.aud)}
+                <strong>Audience:</strong>{" "}
+                {JSON.stringify(decoded.payload.aud).replace(/^"|"$/g, "")}
               </Text>
             )}
             {!!decoded.payload.exp && (
@@ -128,7 +131,8 @@ export function JwtInspector({ token, label, jwksUri, expectedNonce }: JwtInspec
             )}
             {!!decoded.payload.nonce && (
               <Text size="xs">
-                <strong>Nonce:</strong> {String(decoded.payload.nonce)}
+                <strong>Nonce:</strong>{" "}
+                {JSON.stringify(decoded.payload.nonce).replace(/^"|"$/g, "")}
               </Text>
             )}
           </Stack>
@@ -136,25 +140,29 @@ export function JwtInspector({ token, label, jwksUri, expectedNonce }: JwtInspec
 
         <Tabs.Panel value="signature" pt="sm">
           <Stack gap="sm">
-            <CodeBlock
-              code={decoded.signature}
-              lang="text"
-              style={{ wordBreak: "break-all" }}
-            />
+            <CodeBlock code={decoded.signature} lang="text" style={{ wordBreak: "break-all" }} />
             {jwksUri ? (
               <div>
                 {verified === true && (
-                  <Text size="sm" c="green">✓ Signature verified successfully</Text>
+                  <Text size="sm" c="green">
+                    ✓ Signature verified successfully
+                  </Text>
                 )}
                 {verified === false && (
-                  <Text size="sm" c="red">✗ Signature verification failed: {verifyError}</Text>
+                  <Text size="sm" c="red">
+                    ✗ Signature verification failed: {verifyError}
+                  </Text>
                 )}
                 {verified === null && (
-                  <Text size="sm" c="dimmed">Verifying signature...</Text>
+                  <Text size="sm" c="dimmed">
+                    Verifying signature...
+                  </Text>
                 )}
               </div>
             ) : (
-              <Text size="sm" c="dimmed">No JWKS URI available for verification</Text>
+              <Text size="sm" c="dimmed">
+                No JWKS URI available for verification
+              </Text>
             )}
           </Stack>
         </Tabs.Panel>

@@ -1,9 +1,4 @@
 /**
- * PKCE (Proof Key for Code Exchange) utilities using Web Crypto API
- * RFC 7636: https://tools.ietf.org/html/rfc7636
- */
-
-/**
  * Base64URL encode a Uint8Array
  */
 function base64UrlEncode(array: Uint8Array): string {
@@ -29,7 +24,7 @@ export function generateCodeVerifier(): string {
  */
 export async function generateCodeChallenge(
   verifier: string,
-  method: "S256" | "plain" = "S256"
+  method: "S256" | "plain" = "S256",
 ): Promise<string> {
   if (method === "plain") {
     return verifier;
@@ -47,7 +42,7 @@ export async function generateCodeChallenge(
  * @returns An object containing both verifier and challenge
  */
 export async function generatePKCEPair(
-  method: "S256" | "plain" = "S256"
+  method: "S256" | "plain" = "S256",
 ): Promise<{ verifier: string; challenge: string; method: string }> {
   const verifier = generateCodeVerifier();
   const challenge = await generateCodeChallenge(verifier, method);

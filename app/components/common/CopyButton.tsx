@@ -1,6 +1,3 @@
-/**
- * Copy to clipboard button
- */
 import { ActionIcon, Tooltip } from "@mantine/core";
 import { IconCopy, IconCheck } from "@tabler/icons-react";
 import { useState } from "react";

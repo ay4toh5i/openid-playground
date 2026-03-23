@@ -1,6 +1,3 @@
-/**
- * Error alert component
- */
 import { Alert } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
 

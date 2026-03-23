@@ -1,7 +1,3 @@
-/**
- * Client configuration storage using LocalStorage
- */
-
 // Re-export types from oidc.ts (we'll need to make them exportable)
 export interface ClientConfig {
   id: string;
@@ -70,7 +66,9 @@ export class ClientConfigStorage {
   /**
    * Save a new client configuration or update existing one
    */
-  static save(client: Omit<ClientConfig, "id" | "createdAt" | "updatedAt"> | ClientConfig): ClientConfig {
+  static save(
+    client: Omit<ClientConfig, "id" | "createdAt" | "updatedAt"> | ClientConfig,
+  ): ClientConfig {
     if (typeof window === "undefined") {
       throw new Error("LocalStorage not available");
     }

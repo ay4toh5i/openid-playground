@@ -8,13 +8,15 @@
     "preview": "wrangler dev",
     "deploy": "npm run build && wrangler deploy",
     "fmt": "oxfmt",
-    "lint": "oxlint --type-aware"
+    "lint": "oxlint --type-aware --type-check",
+    "lint:fix": "oxlint --type-aware --type-check --fix"
   },
   "dependencies": {
     "@hono/react-renderer": "^1.0.1",
     "@mantine/core": "^7.17.8",
     "@mantine/hooks": "^7.17.8",
     "@tabler/icons-react": "^3.40.0",
+    "@tanstack/react-query": "^5.94.5",
     "hono": "^4.12.8",
     "honox": "^0.1.55",
     "jose": "^5.10.0",
@@ -33,6 +35,7 @@
     "oxfmt": "^0.41.0",
     "oxlint": "^1.56.0",
     "oxlint-tsgolint": "^0.17.1",
+    "playwright": "^1.58.2",
     "tailwindcss": "^4.0.9",
     "vite": "^7.3.1",
     "wrangler": "^4.4.0"

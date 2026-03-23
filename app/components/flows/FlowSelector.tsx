@@ -1,8 +1,5 @@
-/**
- * Flow selector with navigation links
- */
 import { Stack, Card, Text, Badge } from "@mantine/core";
-import type { FlowType } from "../../lib/flow-types";
+import type { FlowType } from "../../lib/oidc";
 
 interface FlowCardProps {
   href?: string;
@@ -77,11 +74,7 @@ export function FlowSelector({ currentFlow }: { currentFlow: FlowType | null }) 
         description="Obtain new access token using refresh token"
       />
 
-      <FlowCard
-        title="Device Code"
-        description="Flow for devices with limited input"
-        comingSoon
-      />
+      <FlowCard title="Device Code" description="Flow for devices with limited input" comingSoon />
     </Stack>
   );
 }

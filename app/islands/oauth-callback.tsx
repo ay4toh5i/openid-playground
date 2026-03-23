@@ -1,6 +1,3 @@
-/**
- * OAuth callback handler island
- */
 import { useEffect, useState } from "react";
 
 export default function OAuthCallback() {
@@ -12,7 +9,9 @@ export default function OAuthCallback() {
   }, []);
 
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     try {
       // Parse URL parameters
@@ -23,12 +22,9 @@ export default function OAuthCallback() {
       const code = params.get("code") || hash.get("code");
       const state = params.get("state") || hash.get("state");
       const error = params.get("error") || hash.get("error");
-      const errorDescription =
-        params.get("error_description") || hash.get("error_description");
+      const errorDescription = params.get("error_description") || hash.get("error_description");
 
-      setDebugInfo(
-        `Code: ${code}\nState: ${state}\nError: ${error}\nOpener: ${!!window.opener}`
-      );
+      setDebugInfo(`Code: ${code}\nState: ${state}\nError: ${error}\nOpener: ${!!window.opener}`);
 
       // Send message to parent window
       if (window.opener) {
@@ -40,7 +36,7 @@ export default function OAuthCallback() {
             error: error || undefined,
             error_description: errorDescription || undefined,
           },
-          window.location.origin
+          window.location.origin,
         );
 
         // Close the popup after a short delay

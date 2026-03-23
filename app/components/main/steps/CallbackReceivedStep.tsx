@@ -1,14 +1,10 @@
-/**
- * Callback received step - props-based, derives stateValid during render
- * No useEffect or auto-advance
- */
 import { Paper, Stack, Text, Code, Group, Badge, Alert } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
 import { CopyButton } from "../../common/CopyButton";
-import type { AuthorizationCallbackData } from "../../../lib/flow-types";
+import type { AuthorizationResponse } from "../../../lib/oidc";
 
 interface CallbackReceivedStepProps {
-  callback: AuthorizationCallbackData | null;
+  callback: AuthorizationResponse | null;
   expectedState?: string;
 }
 
@@ -16,13 +12,15 @@ export function CallbackReceivedStep({ callback, expectedState }: CallbackReceiv
   if (!callback) {
     return (
       <Paper p="md" mt="sm" withBorder>
-        <Text size="sm" c="dimmed">Waiting for authorization callback...</Text>
+        <Text size="sm" c="dimmed">
+          Waiting for authorization callback...
+        </Text>
       </Paper>
     );
   }
 
-  const stateValid =
-    expectedState && callback.state ? expectedState === callback.state : null;
+  const cb = callback;
+  const stateValid = expectedState && cb.state ? expectedState === cb.state : null;
 
   return (
     <Paper p="md" mt="sm" withBorder>
@@ -38,9 +36,9 @@ export function CallbackReceivedStep({ callback, expectedState }: CallbackReceiv
             <Text size="sm" fw={500}>
               Authorization Code:
             </Text>
-            <CopyButton value={callback.code ?? ""} label="Copy code" />
+            <CopyButton value={cb.code ?? ""} label="Copy code" />
           </Group>
-          <Code block>{callback.code}</Code>
+          <Code block>{cb.code}</Code>
         </div>
 
         <div>
@@ -55,9 +53,9 @@ export function CallbackReceivedStep({ callback, expectedState }: CallbackReceiv
                 </Badge>
               )}
             </Group>
-            <CopyButton value={callback.state ?? ""} label="Copy state" />
+            <CopyButton value={cb.state ?? ""} label="Copy state" />
           </Group>
-          <Code block>{callback.state}</Code>
+          <Code block>{cb.state}</Code>
         </div>
       </Stack>
     </Paper>

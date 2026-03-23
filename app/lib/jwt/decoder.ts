@@ -1,6 +1,3 @@
-/**
- * JWT decoding and verification utilities using jose library
- */
 import { decodeJwt, decodeProtectedHeader, createRemoteJWKSet, jwtVerify } from "jose";
 
 export interface DecodedJWT {
@@ -62,7 +59,7 @@ export function decodeJWT(token: string): DecodedJWT {
  */
 export async function verifyJWT(
   token: string,
-  jwksUri: string
+  jwksUri: string,
 ): Promise<{ verified: boolean; error?: string; payload?: Record<string, unknown> }> {
   try {
     const JWKS = createRemoteJWKSet(new URL(jwksUri));

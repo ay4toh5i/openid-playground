@@ -1,7 +1,5 @@
-/**
- * Client Credentials Flow island - self-contained with its own state management
- */
 import { useReducer, useState, useEffect } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   MantineProvider,
   localStorageColorSchemeManager,
@@ -11,12 +9,13 @@ import {
   Box,
 } from "@mantine/core";
 import type { ClientConfig, OIDCProviderMetadata } from "../lib/storage/client-config";
-import type { TokenResponseData, TokenErrorData } from "../lib/flow-types";
+import type { TokenResponse } from "../lib/oidc";
 import { PlaygroundLayout } from "../components/layout/PlaygroundLayout";
-import { ClientSelectionStep } from "../components/main-column/steps/ClientSelectionStep";
-import { ClientCredentialsStep } from "../components/main-column/steps/ClientCredentialsStep";
-import { TokenResponseStep } from "../components/main-column/steps/TokenResponseStep";
-import { ErrorAlert } from "../components/common/ErrorAlert";
+import { ClientSelectionStep } from "../components/main/steps/ClientSelectionStep";
+import { ClientCredentialsStep } from "../components/main/steps/ClientCredentialsStep";
+import { TokenResponseStep } from "../components/main/steps/TokenResponseStep";
+
+const queryClient = new QueryClient();
 
 const colorSchemeManager = localStorageColorSchemeManager({
   key: "oidc-playground-color-scheme",
@@ -101,30 +100,23 @@ function DotBullet() {
 type ClientCredentialsState = {
   client: ClientConfig | null;
   metadata: OIDCProviderMetadata | null;
-  tokenResponse: TokenResponseData | null;
-  tokenError: TokenErrorData | null;
-  error: string | null;
+  tokenResponse: TokenResponse | null;
 };
 
 type ClientCredentialsAction =
   | { type: "CLIENT_SELECTED"; client: ClientConfig; metadata: OIDCProviderMetadata }
-  | { type: "TOKEN_RECEIVED"; token: TokenResponseData }
-  | { type: "TOKEN_ERROR"; error: TokenErrorData }
-  | { type: "ERROR"; message: string }
-  | { type: "CLEAR_ERROR" }
+  | { type: "TOKEN_RECEIVED"; token: TokenResponse }
   | { type: "RESET" };
 
 const initialState: ClientCredentialsState = {
   client: null,
   metadata: null,
   tokenResponse: null,
-  tokenError: null,
-  error: null,
 };
 
 function reducer(
   state: ClientCredentialsState,
-  action: ClientCredentialsAction
+  action: ClientCredentialsAction,
 ): ClientCredentialsState {
   switch (action.type) {
     case "CLIENT_SELECTED":
@@ -133,17 +125,9 @@ function reducer(
         client: action.client,
         metadata: action.metadata,
         tokenResponse: null,
-        tokenError: null,
-        error: null,
       };
     case "TOKEN_RECEIVED":
-      return { ...state, tokenResponse: action.token, tokenError: null, error: null };
-    case "TOKEN_ERROR":
-      return { ...state, tokenError: action.error, tokenResponse: null };
-    case "ERROR":
-      return { ...state, error: action.message };
-    case "CLEAR_ERROR":
-      return { ...state, error: null, tokenError: null };
+      return { ...state, tokenResponse: action.token };
     case "RESET":
       return initialState;
     default:
@@ -166,23 +150,6 @@ export default function ClientCredentialsFlow() {
         Client Credentials Flow
       </Text>
 
-      {state.error && (
-        <ErrorAlert
-          error={state.error}
-          onClose={() => dispatch({ type: "CLEAR_ERROR" })}
-        />
-      )}
-      {state.tokenError && (
-        <ErrorAlert
-          error={`Token Error: ${state.tokenError.error}${
-            state.tokenError.error_description
-              ? ` - ${state.tokenError.error_description}`
-              : ""
-          }`}
-          onClose={() => dispatch({ type: "CLEAR_ERROR" })}
-        />
-      )}
-
       <Timeline bulletSize={28} lineWidth={2}>
         {/* Step 1: Client Selection */}
         <Timeline.Item bullet={<NumberBullet n={1} />} title="Select Client">
@@ -193,7 +160,6 @@ export default function ClientCredentialsFlow() {
             onClientSelected={(client, metadata) =>
               dispatch({ type: "CLIENT_SELECTED", client, metadata })
             }
-            onError={(message) => dispatch({ type: "ERROR", message })}
           />
         </Timeline.Item>
 
@@ -206,7 +172,6 @@ export default function ClientCredentialsFlow() {
             client={state.client}
             tokenEndpoint={state.metadata?.token_endpoint}
             onTokenReceived={(token) => dispatch({ type: "TOKEN_RECEIVED", token })}
-            onTokenError={(error) => dispatch({ type: "TOKEN_ERROR", error })}
           />
         </Timeline.Item>
 
@@ -225,23 +190,25 @@ export default function ClientCredentialsFlow() {
   );
 
   return (
-    <MantineProvider
-      theme={theme}
-      colorSchemeManager={colorSchemeManager}
-      defaultColorScheme="light"
-    >
-      {mounted ? (
-        <PlaygroundLayout
-          currentFlow="client_credentials"
-          tokenResponse={state.tokenResponse}
-          providerMetadata={state.metadata}
-          authRequest={null}
-        >
-          {content}
-        </PlaygroundLayout>
-      ) : (
-        <div style={{ minHeight: "100vh" }} />
-      )}
-    </MantineProvider>
+    <QueryClientProvider client={queryClient}>
+      <MantineProvider
+        theme={theme}
+        colorSchemeManager={colorSchemeManager}
+        defaultColorScheme="light"
+      >
+        {mounted ? (
+          <PlaygroundLayout
+            currentFlow="client_credentials"
+            tokenResponse={state.tokenResponse}
+            providerMetadata={state.metadata}
+            authRequest={null}
+          >
+            {content}
+          </PlaygroundLayout>
+        ) : (
+          <div style={{ minHeight: "100vh" }} />
+        )}
+      </MantineProvider>
+    </QueryClientProvider>
   );
 }

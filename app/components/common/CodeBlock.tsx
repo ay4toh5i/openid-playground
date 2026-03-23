@@ -1,10 +1,8 @@
-/**
- * Syntax-highlighted code block using Shiki
- */
 import { useState, useEffect, useRef } from "react";
+import { useComputedColorScheme } from "@mantine/core";
 import type { Highlighter, BundledLanguage } from "shiki";
 
-type SupportedLang = "json" | "yaml" | "javascript" | "typescript" | "text";
+type SupportedLang = "json" | "yaml" | "javascript" | "typescript" | "bash" | "text";
 
 // Singleton highlighter - created once, shared across all CodeBlock instances
 let highlighterPromise: Promise<Highlighter> | null = null;
@@ -14,8 +12,8 @@ function getHighlighter(): Promise<Highlighter> {
     highlighterPromise = import("shiki").then(({ createHighlighter }) =>
       createHighlighter({
         themes: ["github-light", "github-dark"],
-        langs: ["json", "yaml", "javascript", "typescript"],
-      })
+        langs: ["json", "yaml", "javascript", "typescript", "bash"],
+      }),
     );
   }
   return highlighterPromise;
@@ -24,16 +22,11 @@ function getHighlighter(): Promise<Highlighter> {
 interface CodeBlockProps {
   code: string;
   lang?: SupportedLang;
-  colorScheme?: "light" | "dark";
   style?: React.CSSProperties;
 }
 
-export function CodeBlock({
-  code,
-  lang = "text",
-  colorScheme = "light",
-  style,
-}: CodeBlockProps) {
+export function CodeBlock({ code, lang = "text", style }: CodeBlockProps) {
+  const colorScheme = useComputedColorScheme("light");
   const [html, setHtml] = useState<string>("");
   const codeRef = useRef(code);
   const langRef = useRef(lang);
@@ -50,7 +43,7 @@ export function CodeBlock({
     }
 
     // Async: load and use Shiki highlighter
-    getHighlighter().then((hl) => {
+    void getHighlighter().then((hl) => {
       // Only update if the inputs haven't changed since we started
       if (
         code === codeRef.current &&
@@ -91,13 +84,6 @@ export function CodeBlock({
   }
 
   return (
-    <div
-      dangerouslySetInnerHTML={{ __html: html }}
-      style={{
-        ...baseStyle,
-        // Override shiki container styles
-      }}
-      className="shiki-block"
-    />
+    <div dangerouslySetInnerHTML={{ __html: html }} style={baseStyle} className="shiki-block" />
   );
 }

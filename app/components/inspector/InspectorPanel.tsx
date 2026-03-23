@@ -1,19 +1,20 @@
-/**
- * Inspector panel for token inspection (props-based, no context)
- */
 import { Stack, Text, Paper, Divider } from "@mantine/core";
-import type { TokenResponseData, AuthorizationRequestData } from "../../lib/flow-types";
+import type { TokenResponse, AuthorizationRequestConfig } from "../../lib/oidc";
 import type { OIDCProviderMetadata } from "../../lib/storage/client-config";
 import { JwtInspector } from "./JwtInspector";
 import { detectTokenType } from "../../lib/jwt/decoder";
 
 interface InspectorPanelProps {
-  tokenResponse: TokenResponseData | null;
+  tokenResponse: TokenResponse | null;
   providerMetadata: OIDCProviderMetadata | null;
-  authRequest: AuthorizationRequestData | null;
+  authRequest: AuthorizationRequestConfig | null;
 }
 
-export function InspectorPanel({ tokenResponse, providerMetadata, authRequest }: InspectorPanelProps) {
+export function InspectorPanel({
+  tokenResponse,
+  providerMetadata,
+  authRequest,
+}: InspectorPanelProps) {
   if (!tokenResponse) {
     return (
       <Paper p="md" withBorder radius="md" style={{ textAlign: "center" }}>

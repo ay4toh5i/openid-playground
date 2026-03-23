@@ -20,8 +20,8 @@ const script = `(function(){
 export default createRoute((c) => {
   return c.html(
     `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>OAuth Callback</title></head>` +
-    `<body><script>${script}<\/script>` +
-    `<p style="font-family:system-ui;text-align:center;margin-top:20vh">Processing authorization... This window should close automatically.</p>` +
-    `</body></html>`
+      `<body><script>${script}</script>` +
+      `<p style="font-family:system-ui;text-align:center;margin-top:20vh">Processing authorization... This window should close automatically.</p>` +
+      `</body></html>`,
   );
 });

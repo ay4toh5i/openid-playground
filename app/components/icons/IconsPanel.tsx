@@ -1,8 +1,11 @@
-/**
- * Icons panel with action buttons
- */
 import { Stack, ActionIcon, Tooltip, Modal, useMantineColorScheme } from "@mantine/core";
-import { IconSettings, IconFileImport, IconFileExport, IconSun, IconMoon } from "@tabler/icons-react";
+import {
+  IconSettings,
+  IconFileImport,
+  IconFileExport,
+  IconSun,
+  IconMoon,
+} from "@tabler/icons-react";
 import { useState } from "react";
 import { ClientConfigStorage } from "../../lib/storage/client-config";
 import ClientConfigManager from "../../islands/client-config-manager";
@@ -30,7 +33,9 @@ export function IconsPanel() {
     input.accept = "application/json";
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
+      if (!file) {
+        return;
+      }
 
       try {
         const text = await file.text();
@@ -48,14 +53,14 @@ export function IconsPanel() {
   return (
     <>
       <Stack gap="xs" align="center">
-        <Tooltip label={colorScheme === 'dark' ? 'Light Mode' : 'Dark Mode'} position="right">
+        <Tooltip label={colorScheme === "dark" ? "Light Mode" : "Dark Mode"} position="right">
           <ActionIcon
             variant="subtle"
             size="lg"
             onClick={toggleColorScheme}
             aria-label="Toggle color scheme"
           >
-            {colorScheme === 'dark' ? <IconSun size={20} /> : <IconMoon size={20} />}
+            {colorScheme === "dark" ? <IconSun size={20} /> : <IconMoon size={20} />}
           </ActionIcon>
         </Tooltip>
 

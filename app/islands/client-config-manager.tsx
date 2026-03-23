@@ -1,7 +1,3 @@
-/**
- * Client configuration manager island
- * No inner MantineProvider - expects to be rendered within a flow island's MantineProvider
- */
 import { useState } from "react";
 import {
   Stack,
@@ -42,7 +38,7 @@ interface ClientConfigManagerProps {
   onClose?: () => void;
 }
 
-export default function ClientConfigManager({ onClose }: ClientConfigManagerProps = {}) {
+export default function ClientConfigManager({ onClose: _onClose }: ClientConfigManagerProps = {}) {
   const [clients, setClients] = useState<ClientConfig[]>(() => ClientConfigStorage.getAll());
   const [modalOpened, setModalOpened] = useState(false);
   const [editingClient, setEditingClient] = useState<ClientConfig | null>(null);
@@ -105,9 +101,7 @@ export default function ClientConfigManager({ onClose }: ClientConfigManagerProp
       refreshClients();
       setModalOpened(false);
     } catch (error) {
-      alert(
-        `Failed to save client: ${error instanceof Error ? error.message : "Unknown error"}`
-      );
+      alert(`Failed to save client: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setLoading(false);
     }
@@ -198,12 +192,7 @@ export default function ClientConfigManager({ onClose }: ClientConfigManagerProp
       >
         <form onSubmit={handleSubmit(onSubmit)}>
           <Stack gap="md">
-            <TextInput
-              label="Name"
-              {...register("name")}
-              required
-              placeholder="My OAuth Client"
-            />
+            <TextInput label="Name" {...register("name")} required placeholder="My OAuth Client" />
 
             <TextInput
               label="Issuer URL"
@@ -226,7 +215,7 @@ export default function ClientConfigManager({ onClose }: ClientConfigManagerProp
               onChange={(value) =>
                 setValue(
                   "clientAuthenticationMethod",
-                  value as ClientFormData["clientAuthenticationMethod"]
+                  value as ClientFormData["clientAuthenticationMethod"],
                 )
               }
             />

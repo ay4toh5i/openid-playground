@@ -1,7 +1,5 @@
-/**
- * Authorization Code Flow island - self-contained with its own state management
- */
 import { useReducer, useState, useEffect } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   MantineProvider,
   localStorageColorSchemeManager,
@@ -14,20 +12,17 @@ import {
 } from "@mantine/core";
 import type { ClientConfig, OIDCProviderMetadata } from "../lib/storage/client-config";
 import type {
-  AuthorizationRequestData,
-  AuthorizationCallbackData,
-  TokenResponseData,
-  TokenErrorData,
-  PKCEState,
-} from "../lib/flow-types";
+  AuthorizationRequestConfig,
+  AuthorizationResponse,
+  TokenResponse,
+} from "../lib/oidc";
 import { PlaygroundLayout } from "../components/layout/PlaygroundLayout";
-import { ClientSelectionStep } from "../components/main-column/steps/ClientSelectionStep";
-import { AuthorizationRequestStep } from "../components/main-column/steps/AuthorizationRequestStep";
-import { AuthorizationExecuteStep } from "../components/main-column/steps/AuthorizationExecuteStep";
-import { CallbackReceivedStep } from "../components/main-column/steps/CallbackReceivedStep";
-import { TokenExchangeStep } from "../components/main-column/steps/TokenExchangeStep";
-import { TokenResponseStep } from "../components/main-column/steps/TokenResponseStep";
-import { ErrorAlert } from "../components/common/ErrorAlert";
+import { ClientSelectionStep } from "../components/main/steps/ClientSelectionStep";
+import { AuthorizationRequestStep } from "../components/main/steps/AuthorizationRequestStep";
+import { AuthorizationExecuteStep } from "../components/main/steps/AuthorizationExecuteStep";
+import { CallbackReceivedStep } from "../components/main/steps/CallbackReceivedStep";
+import { TokenExchangeStep } from "../components/main/steps/TokenExchangeStep";
+import { TokenResponseStep } from "../components/main/steps/TokenResponseStep";
 
 const colorSchemeManager = localStorageColorSchemeManager({
   key: "oidc-playground-color-scheme",
@@ -107,38 +102,31 @@ function DotBullet() {
   );
 }
 
+const queryClient = new QueryClient();
+
 // State and actions
 
 type AuthCodeState = {
   client: ClientConfig | null;
   metadata: OIDCProviderMetadata | null;
-  authRequest: AuthorizationRequestData | null;
-  pkce: PKCEState | null;
-  callback: AuthorizationCallbackData | null;
-  tokenResponse: TokenResponseData | null;
-  tokenError: TokenErrorData | null;
-  error: string | null;
+  authRequest: AuthorizationRequestConfig | null;
+  callback: AuthorizationResponse | null;
+  tokenResponse: TokenResponse | null;
 };
 
 type AuthCodeAction =
   | { type: "CLIENT_SELECTED"; client: ClientConfig; metadata: OIDCProviderMetadata }
-  | { type: "REQUEST_CONFIGURED"; request: AuthorizationRequestData; pkce: PKCEState | null }
-  | { type: "CALLBACK_RECEIVED"; callback: AuthorizationCallbackData }
-  | { type: "TOKEN_RECEIVED"; token: TokenResponseData }
-  | { type: "TOKEN_ERROR"; error: TokenErrorData }
-  | { type: "ERROR"; message: string }
-  | { type: "CLEAR_ERROR" }
+  | { type: "REQUEST_CONFIGURED"; request: AuthorizationRequestConfig }
+  | { type: "CALLBACK_RECEIVED"; callback: AuthorizationResponse }
+  | { type: "TOKEN_RECEIVED"; token: TokenResponse }
   | { type: "RESET" };
 
 const initialState: AuthCodeState = {
   client: null,
   metadata: null,
   authRequest: null,
-  pkce: null,
   callback: null,
   tokenResponse: null,
-  tokenError: null,
-  error: null,
 };
 
 function reducer(state: AuthCodeState, action: AuthCodeAction): AuthCodeState {
@@ -149,38 +137,24 @@ function reducer(state: AuthCodeState, action: AuthCodeAction): AuthCodeState {
         client: action.client,
         metadata: action.metadata,
         authRequest: null,
-        pkce: null,
         callback: null,
         tokenResponse: null,
-        tokenError: null,
-        error: null,
       };
     case "REQUEST_CONFIGURED":
       return {
         ...state,
         authRequest: action.request,
-        pkce: action.pkce,
         callback: null,
         tokenResponse: null,
-        tokenError: null,
-        error: null,
       };
     case "CALLBACK_RECEIVED":
       return {
         ...state,
         callback: action.callback,
         tokenResponse: null,
-        tokenError: null,
-        error: null,
       };
     case "TOKEN_RECEIVED":
-      return { ...state, tokenResponse: action.token, tokenError: null, error: null };
-    case "TOKEN_ERROR":
-      return { ...state, tokenError: action.error, tokenResponse: null };
-    case "ERROR":
-      return { ...state, error: action.message };
-    case "CLEAR_ERROR":
-      return { ...state, error: null, tokenError: null };
+      return { ...state, tokenResponse: action.token };
     case "RESET":
       return initialState;
     default:
@@ -204,23 +178,6 @@ export default function AuthorizationCodeFlow() {
       <Text size="xl" fw={600} mb="xl">
         Authorization Code Flow
       </Text>
-
-      {state.error && (
-        <ErrorAlert
-          error={state.error}
-          onClose={() => dispatch({ type: "CLEAR_ERROR" })}
-        />
-      )}
-      {state.tokenError && (
-        <ErrorAlert
-          error={`Token Error: ${state.tokenError.error}${
-            state.tokenError.error_description
-              ? ` - ${state.tokenError.error_description}`
-              : ""
-          }`}
-          onClose={() => dispatch({ type: "CLEAR_ERROR" })}
-        />
-      )}
 
       <Timeline bulletSize={28} lineWidth={2}>
         {/* Step 0: Redirect URI info */}
@@ -249,7 +206,6 @@ export default function AuthorizationCodeFlow() {
             onClientSelected={(client, metadata) =>
               dispatch({ type: "CLIENT_SELECTED", client, metadata })
             }
-            onError={(message) => dispatch({ type: "ERROR", message })}
           />
         </Timeline.Item>
 
@@ -259,8 +215,8 @@ export default function AuthorizationCodeFlow() {
             Configure authorization parameters
           </Text>
           <AuthorizationRequestStep
-            onRequestConfigured={(request, pkce) =>
-              dispatch({ type: "REQUEST_CONFIGURED", request, pkce })
+            onRequestConfigured={(request) =>
+              dispatch({ type: "REQUEST_CONFIGURED", request })
             }
           />
         </Timeline.Item>
@@ -275,10 +231,7 @@ export default function AuthorizationCodeFlow() {
             metadata={state.metadata}
             authRequest={state.authRequest}
             redirectUri={redirectUri}
-            onCallbackReceived={(callback) =>
-              dispatch({ type: "CALLBACK_RECEIVED", callback })
-            }
-            onError={(message) => dispatch({ type: "ERROR", message })}
+            onCallbackReceived={(callback) => dispatch({ type: "CALLBACK_RECEIVED", callback })}
           />
         </Timeline.Item>
 
@@ -303,9 +256,8 @@ export default function AuthorizationCodeFlow() {
             tokenEndpoint={state.metadata?.token_endpoint}
             code={state.callback?.code}
             redirectUri={redirectUri}
-            codeVerifier={state.pkce?.verifier}
+            codeVerifier={state.authRequest?.code_verifier}
             onTokenReceived={(token) => dispatch({ type: "TOKEN_RECEIVED", token })}
-            onTokenError={(error) => dispatch({ type: "TOKEN_ERROR", error })}
           />
         </Timeline.Item>
 
@@ -324,6 +276,7 @@ export default function AuthorizationCodeFlow() {
   );
 
   return (
+    <QueryClientProvider client={queryClient}>
     <MantineProvider
       theme={theme}
       colorSchemeManager={colorSchemeManager}
@@ -342,5 +295,6 @@ export default function AuthorizationCodeFlow() {
         <div style={{ minHeight: "100vh" }} />
       )}
     </MantineProvider>
+    </QueryClientProvider>
   );
 }

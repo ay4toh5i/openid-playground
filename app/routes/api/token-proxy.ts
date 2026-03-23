@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import type { StatusCode } from "hono/utils/http-status";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 
 const app = new Hono();
 
@@ -18,12 +18,9 @@ app.post("/", async (c) => {
     });
 
     const data = await response.json();
-    return c.json(data, response.status as StatusCode);
+    return c.json(data, response.status as ContentfulStatusCode);
   } catch (error) {
-    return c.json(
-      { error: "proxy_error", error_description: String(error) },
-      500
-    );
+    return c.json({ error: "proxy_error", error_description: String(error) }, 500);
   }
 });
 

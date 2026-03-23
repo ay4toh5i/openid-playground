@@ -1,20 +1,17 @@
-/**
- * 4-column playground layout (props-based, no context)
- */
 import { Grid, useMantineColorScheme } from "@mantine/core";
-import type { FlowType, TokenResponseData, AuthorizationRequestData } from "../../lib/flow-types";
+import type { FlowType, TokenResponse, AuthorizationRequestConfig } from "../../lib/oidc";
 import type { OIDCProviderMetadata } from "../../lib/storage/client-config";
-import { IconsPanel } from "../icons-column/IconsPanel";
-import { FlowSelector } from "../flows-column/FlowSelector";
-import { InspectorPanel } from "../inspector-column/InspectorPanel";
+import { IconsPanel } from "../icons/IconsPanel";
+import { FlowSelector } from "../flows/FlowSelector";
+import { InspectorPanel } from "../inspector/InspectorPanel";
 import type { ReactNode } from "react";
 
 interface PlaygroundLayoutProps {
   currentFlow: FlowType | null;
   children: ReactNode;
-  tokenResponse?: TokenResponseData | null;
+  tokenResponse?: TokenResponse | null;
   providerMetadata?: OIDCProviderMetadata | null;
-  authRequest?: AuthorizationRequestData | null;
+  authRequest?: AuthorizationRequestConfig | null;
 }
 
 export function PlaygroundLayout({
@@ -25,8 +22,7 @@ export function PlaygroundLayout({
   authRequest,
 }: PlaygroundLayoutProps) {
   const { colorScheme } = useMantineColorScheme();
-  const borderColor =
-    colorScheme === "dark" ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)";
+  const borderColor = colorScheme === "dark" ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)";
 
   return (
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden" }}>

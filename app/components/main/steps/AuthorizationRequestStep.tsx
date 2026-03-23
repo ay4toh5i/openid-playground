@@ -1,7 +1,3 @@
-/**
- * Authorization request configuration step
- * Changes are reflected in real-time (no submit button)
- */
 import {
   Paper,
   TextInput,
@@ -16,93 +12,115 @@ import {
   ActionIcon,
   Group,
 } from "@mantine/core";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { IconRefresh, IconPlus, IconTrash } from "@tabler/icons-react";
-import { useState, useEffect, useCallback, useRef } from "react";
-import { generateState, generateNonce } from "../../../hooks/useAuthorizationFlow";
-import { generatePKCEPair } from "../../../lib/crypto/pkce";
-import type { AuthorizationRequestData, PKCEState } from "../../../lib/flow-types";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { generateState, generateNonce } from "../../../lib/oauth";
+import { generateCodeVerifier, generateCodeChallenge } from "../../../lib/crypto/pkce";
+import type { AuthorizationRequestConfig } from "../../../lib/oidc";
 
-interface AuthorizationRequestStepProps {
-  onRequestConfigured: (request: AuthorizationRequestData, pkce: PKCEState | null) => void;
+function usePkceChallenge(verifier: string): string {
+  const [challenge, setChallenge] = useState("");
+  useEffect(() => {
+    void (async () => {
+      if (verifier !== "") {
+        setChallenge("");
+      }
+
+      setChallenge(await generateCodeChallenge(verifier));
+    })();
+  }, [verifier]);
+  return challenge;
 }
 
-export function AuthorizationRequestStep({ onRequestConfigured }: AuthorizationRequestStepProps) {
-  const [usePKCE, setUsePKCE] = useState(true);
-  const [useNonce, setUseNonce] = useState(true);
-  const [pkcePreview, setPkcePreview] = useState<{ verifier: string; challenge: string } | null>(null);
-  const [customParams, setCustomParams] = useState<Array<{ key: string; value: string }>>([]);
+interface AuthorizationRequestStepProps {
+  onRequestConfigured: (request: AuthorizationRequestConfig) => void;
+}
 
-  const { register, control, watch, setValue, getValues } = useForm<AuthorizationRequestData>({
+type FormValues = {
+  scope: string;
+  response_type: string;
+  state: string;
+  nonce: string;
+  useNonce: boolean;
+  usePKCE: boolean;
+  pkceVerifier: string;
+  response_mode?: string;
+  display?: string;
+  prompt?: string;
+  max_age?: number;
+  ui_locales?: string;
+  id_token_hint?: string;
+  login_hint?: string;
+  acr_values?: string;
+  resource?: string;
+  customParams: Array<{ key: string; value: string }>;
+};
+
+function buildRequest(values: FormValues): AuthorizationRequestConfig {
+  const request: AuthorizationRequestConfig = {
+    scope: values.scope,
+    response_type: values.response_type,
+    state: values.state,
+    nonce: values.useNonce ? values.nonce : undefined,
+    response_mode: values.response_mode,
+    display: values.display as AuthorizationRequestConfig["display"],
+    prompt: values.prompt,
+    max_age: values.max_age,
+    ui_locales: values.ui_locales,
+    id_token_hint: values.id_token_hint,
+    login_hint: values.login_hint,
+    acr_values: values.acr_values,
+    resource: values.resource,
+  };
+
+  const validCustomParams = values.customParams.filter((p) => p.key && p.value);
+  if (validCustomParams.length > 0) {
+    request.customParams = Object.fromEntries(validCustomParams.map((p) => [p.key, p.value]));
+  }
+
+  if (values.usePKCE && values.pkceVerifier) {
+    request.code_verifier = values.pkceVerifier;
+  }
+
+  return request;
+}
+
+export function AuthorizationRequestStep({
+  onRequestConfigured: onAuthRequestChanged,
+}: AuthorizationRequestStepProps) {
+  const { register, control, watch, setValue, getValues } = useForm<FormValues>({
     defaultValues: {
       scope: "openid profile email",
       response_type: "code",
       state: generateState(),
       nonce: generateNonce(),
+      useNonce: true,
+      usePKCE: true,
+      pkceVerifier: generateCodeVerifier(),
+      customParams: [],
     },
   });
 
-  // Generate initial PKCE - legitimate useEffect (async crypto)
+  const { fields, append, remove } = useFieldArray({ control, name: "customParams" });
+
+  const onAuthRequestChangedRef = useRef(onAuthRequestChanged);
   useEffect(() => {
-    generatePKCEPair("S256").then(setPkcePreview);
-  }, []);
+    onAuthRequestChangedRef.current = onAuthRequestChanged;
+  });
 
-  // Ref holds latest non-form state so buildAndEmit stays stable
-  const stateRef = useRef({ usePKCE, useNonce, pkcePreview, customParams, onRequestConfigured });
-  stateRef.current = { usePKCE, useNonce, pkcePreview, customParams, onRequestConfigured };
+  const emit = useCallback(() => {
+    onAuthRequestChangedRef.current(buildRequest(getValues()));
+  }, [getValues]);
 
-  const buildAndEmit = useCallback(() => {
-    const { usePKCE, useNonce, pkcePreview, customParams, onRequestConfigured } = stateRef.current;
-    const values = getValues();
-    const request: AuthorizationRequestData = { ...values };
-
-    if (!useNonce) request.nonce = undefined;
-
-    if (customParams.length > 0) {
-      const obj: Record<string, string> = {};
-      customParams.forEach(({ key, value }) => {
-        if (key && value) obj[key] = value;
-      });
-      if (Object.keys(obj).length > 0) request.customParams = obj;
-    }
-
-    let pkceState: PKCEState | null = null;
-    if (usePKCE && pkcePreview) {
-      pkceState = { verifier: pkcePreview.verifier, challenge: pkcePreview.challenge, method: "S256" };
-      request.code_challenge = pkceState.challenge;
-      request.code_challenge_method = "S256";
-    } else {
-      delete request.code_challenge;
-      delete request.code_challenge_method;
-    }
-
-    onRequestConfigured(request, pkceState);
-  }, [getValues]); // getValues is stable
-
-  // Subscribe to form field changes - legitimate useEffect (external subscription)
   useEffect(() => {
-    buildAndEmit(); // emit initial values
-    const { unsubscribe } = watch(() => buildAndEmit());
+    emit();
+    const { unsubscribe } = watch(() => emit());
     return unsubscribe;
-  }, [watch, buildAndEmit]); // both stable
+  }, [emit, watch]);
 
-  // Re-emit when non-form state changes
-  useEffect(() => {
-    buildAndEmit();
-  }, [usePKCE, useNonce, pkcePreview, customParams, buildAndEmit]);
-
-  const regeneratePKCE = () => {
-    generatePKCEPair("S256").then(setPkcePreview);
-  };
-
-  const addCustomParam = () => setCustomParams([...customParams, { key: "", value: "" }]);
-  const removeCustomParam = (index: number) =>
-    setCustomParams(customParams.filter((_, i) => i !== index));
-  const updateCustomParam = (index: number, field: "key" | "value", value: string) => {
-    const updated = [...customParams];
-    updated[index][field] = value;
-    setCustomParams(updated);
-  };
+  const { usePKCE, useNonce, pkceVerifier } = watch();
+  const pkceChallenge = usePkceChallenge(pkceVerifier);
 
   return (
     <Paper p="md" mt="sm" withBorder>
@@ -153,16 +171,22 @@ export function AuthorizationRequestStep({ onRequestConfigured }: AuthorizationR
 
         <div>
           <Group justify="space-between" mb="xs">
-            <Switch
-              label="Enable Nonce"
-              description="Recommended for OIDC to mitigate replay attacks"
-              checked={useNonce}
-              onChange={(e) => {
-                const enabled = e.currentTarget.checked;
-                setUseNonce(enabled);
-                if (enabled) setValue("nonce", generateNonce());
-                else setValue("nonce", undefined);
-              }}
+            <Controller
+              name="useNonce"
+              control={control}
+              render={({ field }) => (
+                <Switch
+                  label="Enable Nonce"
+                  description="Recommended for OIDC to mitigate replay attacks"
+                  checked={field.value}
+                  onChange={(e) => {
+                    field.onChange(e.currentTarget.checked);
+                    if (e.currentTarget.checked) {
+                      setValue("nonce", generateNonce());
+                    }
+                  }}
+                />
+              )}
             />
             {useNonce && (
               <ActionIcon
@@ -191,38 +215,42 @@ export function AuthorizationRequestStep({ onRequestConfigured }: AuthorizationR
 
         <div>
           <Group justify="space-between" mb="xs">
-            <Switch
-              label="Enable PKCE (Proof Key for Code Exchange)"
-              description="Recommended for all clients to prevent authorization code interception attacks"
-              checked={usePKCE}
-              onChange={(e) => {
-                const enabled = e.currentTarget.checked;
-                setUsePKCE(enabled);
-                if (enabled && !pkcePreview) regeneratePKCE();
-              }}
+            <Controller
+              name="usePKCE"
+              control={control}
+              render={({ field }) => (
+                <Switch
+                  label="Enable PKCE (Proof Key for Code Exchange)"
+                  description="Recommended for all clients to prevent authorization code interception attacks"
+                  checked={field.value}
+                  onChange={(e) => {
+                    field.onChange(e.currentTarget.checked);
+                  }}
+                />
+              )}
             />
             {usePKCE && (
               <ActionIcon
                 variant="subtle"
                 size="sm"
-                onClick={regeneratePKCE}
+                onClick={() => setValue("pkceVerifier", generateCodeVerifier())}
                 title="Regenerate PKCE values"
               >
                 <IconRefresh size={16} />
               </ActionIcon>
             )}
           </Group>
-          {usePKCE && pkcePreview && (
+          {usePKCE && pkceVerifier && (
             <Stack gap="md">
               <TextInput
                 label="Code Verifier"
-                value={pkcePreview.verifier}
+                value={pkceVerifier}
                 readOnly
                 styles={{ input: { fontFamily: "monospace", fontSize: "12px" } }}
               />
               <TextInput
                 label="Code Challenge (SHA-256)"
-                value={pkcePreview.challenge}
+                value={pkceChallenge}
                 readOnly
                 styles={{ input: { fontFamily: "monospace", fontSize: "12px" } }}
               />
@@ -333,25 +361,19 @@ export function AuthorizationRequestStep({ onRequestConfigured }: AuthorizationR
 
                 <Divider label="Custom Parameters" />
 
-                {customParams.map((param, index) => (
-                  <Group key={index} gap="xs">
+                {fields.map((field, index) => (
+                  <Group key={field.id} gap="xs">
                     <TextInput
                       placeholder="Parameter name"
-                      value={param.key}
-                      onChange={(e) => updateCustomParam(index, "key", e.target.value)}
+                      {...register(`customParams.${index}.key`)}
                       style={{ flex: 1 }}
                     />
                     <TextInput
                       placeholder="Parameter value"
-                      value={param.value}
-                      onChange={(e) => updateCustomParam(index, "value", e.target.value)}
+                      {...register(`customParams.${index}.value`)}
                       style={{ flex: 1 }}
                     />
-                    <ActionIcon
-                      color="red"
-                      variant="subtle"
-                      onClick={() => removeCustomParam(index)}
-                    >
+                    <ActionIcon color="red" variant="subtle" onClick={() => remove(index)}>
                       <IconTrash size={16} />
                     </ActionIcon>
                   </Group>
@@ -359,7 +381,7 @@ export function AuthorizationRequestStep({ onRequestConfigured }: AuthorizationR
 
                 <ActionIcon
                   variant="light"
-                  onClick={addCustomParam}
+                  onClick={() => append({ key: "", value: "" })}
                   title="Add custom parameter"
                 >
                   <IconPlus size={16} />

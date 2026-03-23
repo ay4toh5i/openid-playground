@@ -1,9 +1,5 @@
-/**
- * Token exchange API endpoint
- * Handles token requests with various client authentication methods
- */
 import { Hono } from "hono";
-import { SignJWT } from "jose";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { ClientConfig } from "../../lib/storage/client-config";
 
 type TokenRequest = {
@@ -31,7 +27,7 @@ const app = new Hono();
 async function generateClientAssertion(
   clientId: string,
   tokenEndpoint: string,
-  privateKeyPem: string
+  privateKeyPem: string,
 ): Promise<string> {
   try {
     // Use jose's importPKCS8 for better compatibility
@@ -55,7 +51,9 @@ async function generateClientAssertion(
     return jwt;
   } catch (error) {
     console.error("Failed to generate client assertion:", error);
-    throw new Error(`Failed to generate client assertion: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(
+      `Failed to generate client assertion: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
@@ -70,7 +68,7 @@ app.post("/", async (c) => {
           error: "invalid_request",
           error_description: "Missing required parameters",
         },
-        400
+        400,
       );
     }
 
@@ -103,7 +101,7 @@ app.post("/", async (c) => {
               error: "invalid_client",
               error_description: "Client secret is required for client_secret_basic",
             },
-            400
+            400,
           );
         }
         const credentials = btoa(`${client.clientId}:${client.clientSecret}`);
@@ -118,7 +116,7 @@ app.post("/", async (c) => {
               error: "invalid_client",
               error_description: "Client secret is required for client_secret_post",
             },
-            400
+            400,
           );
         }
         formBody.append("client_id", client.clientId);
@@ -133,27 +131,27 @@ app.post("/", async (c) => {
               error: "invalid_client",
               error_description: "Private key is required for private_key_jwt",
             },
-            400
+            400,
           );
         }
         try {
           const assertion = await generateClientAssertion(
             client.clientId,
             tokenEndpoint,
-            client.privateKey
+            client.privateKey,
           );
           formBody.append("client_assertion", assertion);
           formBody.append(
             "client_assertion_type",
-            "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+            "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
           );
-        } catch (error) {
+        } catch {
           return c.json(
             {
               error: "invalid_client",
               error_description: "Failed to generate client assertion",
             },
-            400
+            400,
           );
         }
         break;
@@ -170,7 +168,7 @@ app.post("/", async (c) => {
             error: "invalid_client",
             error_description: "Unsupported client authentication method",
           },
-          400
+          400,
         );
     }
 
@@ -184,7 +182,7 @@ app.post("/", async (c) => {
     const data = await response.json();
 
     // Return the token response (or error) with the same status code
-    return c.json(data, response.status);
+    return c.json(data, response.status as ContentfulStatusCode);
   } catch (error) {
     console.error("Token exchange error:", error);
     return c.json(
@@ -192,7 +190,7 @@ app.post("/", async (c) => {
         error: "server_error",
         error_description: error instanceof Error ? error.message : "Internal server error",
       },
-      500
+      500,
     );
   }
 });

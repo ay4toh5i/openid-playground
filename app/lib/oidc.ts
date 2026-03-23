@@ -230,6 +230,15 @@ export type Client =
       privateKey: string;
     };
 
+export type FlowType = "authorization_code" | "client_credentials" | "refresh_token";
+
+export type AuthorizationResponse = {
+  code?: string;
+  state?: string;
+  error?: string;
+  error_description?: string;
+};
+
 export type AuthorizationRequest = {
   /**
    * REQUIRED. OpenID Connect requests MUST contain the openid scope value.
@@ -275,7 +284,7 @@ export type AuthorizationRequest = {
    * - fragment: Authorization Response parameters are encoded in the fragment
    * - form_post: Authorization Response parameters are encoded as HTML form values (OAuth 2.0 Form Post Response Mode)
    */
-  response_mode?: "query" | "fragment" | "form_post" | string;
+  response_mode?: string;
 
   /**
    * OPTIONAL. ASCII string value that specifies how the Authorization Server displays the authentication and consent user interface pages.
@@ -321,6 +330,11 @@ export type AuthorizationRequest = {
   acr_values?: string;
 
   /**
+   * OPTIONAL. Code verifier for PKCE (stored alongside the request for use in token exchange).
+   */
+  code_verifier?: string;
+
+  /**
    * OPTIONAL. Code challenge for PKCE (Proof Key for Code Exchange).
    * A challenge derived from the code verifier.
    */
@@ -338,7 +352,19 @@ export type AuthorizationRequest = {
    * Multiple resource parameters may be used to indicate that the requested token is intended to be used at multiple resources.
    */
   resource?: string | string[];
+
+  /**
+   * OPTIONAL. Custom parameters to include in the authorization request.
+   */
+  customParams?: Record<string, string>;
+
 };
+
+/**
+ * Authorization request parameters configurable by the user (before client_id and redirect_uri are known).
+ * These are the fields managed by the form; client_id and redirect_uri are added when building the URL.
+ */
+export type AuthorizationRequestConfig = Omit<AuthorizationRequest, "client_id" | "redirect_uri">;
 
 /**
  * Token Request using Authorization Code Grant
@@ -531,17 +557,12 @@ export type TokenResponse = {
    * REQUIRED if the scope is different from the scope requested by the client.
    */
   scope?: string;
-};
 
-/**
- * Successful Token Response for OpenID Connect
- */
-export type OpenIDConnectTokenResponse = TokenResponse & {
   /**
-   * REQUIRED. ID Token value associated with the authenticated session.
+   * REQUIRED if openid scope requested. ID Token value associated with the authenticated session.
    * The ID Token is a security token that contains Claims about the Authentication of an End-User by an Authorization Server.
    */
-  id_token: string;
+  id_token?: string;
 };
 
 /**
@@ -558,14 +579,7 @@ export type TokenErrorResponse = {
    * - unsupported_grant_type: The grant type is not supported by the authorization server
    * - invalid_scope: The requested scope is invalid, unknown, or malformed
    */
-  error:
-    | "invalid_request"
-    | "invalid_client"
-    | "invalid_grant"
-    | "unauthorized_client"
-    | "unsupported_grant_type"
-    | "invalid_scope"
-    | string;
+  error: string;
 
   /**
    * OPTIONAL. Human-readable ASCII text providing additional information.

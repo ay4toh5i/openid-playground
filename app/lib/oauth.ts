@@ -1,14 +1,10 @@
-/**
- * Authorization flow operations - pure functions for OAuth/OIDC flows
- * Client assembles the full token request; server only proxies to token endpoint.
- */
-import { generatePKCEPair } from "../lib/crypto/pkce";
+import { generatePKCEPair, generateCodeChallenge } from "../lib/crypto/pkce";
 import type {
-  AuthorizationRequestData,
-  AuthorizationCallbackData,
-  TokenResponseData,
-  TokenErrorData,
-} from "../lib/flow-types";
+  AuthorizationRequestConfig,
+  AuthorizationResponse,
+  TokenResponse,
+  TokenErrorResponse,
+} from "../lib/oidc";
 import type { ClientConfig } from "../lib/storage/client-config";
 
 export { generatePKCEPair };
@@ -40,12 +36,12 @@ export function generateNonce(): string {
 /**
  * Build authorization URL from request parameters
  */
-export function buildAuthorizationUrl(
+export async function buildAuthorizationUrl(
   authorizationEndpoint: string,
   clientId: string,
   redirectUri: string,
-  request: AuthorizationRequestData
-): string {
+  request: AuthorizationRequestConfig,
+): Promise<string> {
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
@@ -53,22 +49,52 @@ export function buildAuthorizationUrl(
     scope: request.scope,
   });
 
-  if (request.state) params.append("state", request.state);
-  if (request.nonce) params.append("nonce", request.nonce);
-  if (request.code_challenge) params.append("code_challenge", request.code_challenge);
-  if (request.code_challenge_method) params.append("code_challenge_method", request.code_challenge_method);
-  if (request.response_mode) params.append("response_mode", request.response_mode);
-  if (request.display) params.append("display", request.display);
-  if (request.prompt) params.append("prompt", request.prompt);
-  if (request.max_age !== undefined) params.append("max_age", String(request.max_age));
-  if (request.ui_locales) params.append("ui_locales", request.ui_locales);
-  if (request.id_token_hint) params.append("id_token_hint", request.id_token_hint);
-  if (request.login_hint) params.append("login_hint", request.login_hint);
-  if (request.acr_values) params.append("acr_values", request.acr_values);
-  if (request.resource) params.append("resource", request.resource);
+  if (request.state) {
+    params.append("state", request.state);
+  }
+  if (request.nonce) {
+    params.append("nonce", request.nonce);
+  }
+  if (request.code_verifier) {
+    const challenge = await generateCodeChallenge(request.code_verifier);
+    params.append("code_challenge", challenge);
+    params.append("code_challenge_method", "S256");
+  }
+  if (request.response_mode) {
+    params.append("response_mode", request.response_mode);
+  }
+  if (request.display) {
+    params.append("display", request.display);
+  }
+  if (request.prompt) {
+    params.append("prompt", request.prompt);
+  }
+  if (request.max_age !== undefined) {
+    params.append("max_age", String(request.max_age));
+  }
+  if (request.ui_locales) {
+    params.append("ui_locales", request.ui_locales);
+  }
+  if (request.id_token_hint) {
+    params.append("id_token_hint", request.id_token_hint);
+  }
+  if (request.login_hint) {
+    params.append("login_hint", request.login_hint);
+  }
+  if (request.acr_values) {
+    params.append("acr_values", request.acr_values);
+  }
+  if (request.resource) {
+    const resources = Array.isArray(request.resource) ? request.resource : [request.resource];
+    for (const r of resources) {
+      params.append("resource", r);
+    }
+  }
   if (request.customParams) {
     Object.entries(request.customParams).forEach(([key, value]) => {
-      if (value) params.append(key, value);
+      if (value) {
+        params.append(key, value);
+      }
     });
   }
 
@@ -79,8 +105,8 @@ export function buildAuthorizationUrl(
  * Open authorization popup and wait for callback
  */
 export async function startAuthorizationRequest(
-  authorizationUrl: string
-): Promise<AuthorizationCallbackData> {
+  authorizationUrl: string,
+): Promise<AuthorizationResponse> {
   return new Promise((resolve, reject) => {
     const width = 500;
     const height = 700;
@@ -90,7 +116,7 @@ export async function startAuthorizationRequest(
     const popup = window.open(
       authorizationUrl,
       "oauth_authorization",
-      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
+      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`,
     );
 
     if (!popup) {
@@ -99,11 +125,13 @@ export async function startAuthorizationRequest(
     }
 
     const messageHandler = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
+      if (event.origin !== window.location.origin) {
+        return;
+      }
       if (event.data && event.data.type === "oauth_callback") {
         window.removeEventListener("message", messageHandler);
         popup.close();
-        const callbackData: AuthorizationCallbackData = {
+        const callbackData: AuthorizationResponse = {
           code: event.data.code,
           state: event.data.state,
           error: event.data.error,
@@ -133,13 +161,15 @@ export async function startAuthorizationRequest(
  * Build form body and auth headers for token endpoint request.
  * Client auth credentials are assembled here (not on the server).
  */
-function buildTokenRequest(
+export function buildTokenRequest(
   client: ClientConfig,
-  params: Record<string, string | undefined>
+  params: Record<string, string | undefined>,
 ): { headers: Record<string, string>; body: string } {
   const form = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== "") form.set(key, value);
+    if (value !== undefined && value !== "") {
+      form.set(key, value);
+    }
   }
 
   const headers: Record<string, string> = {
@@ -161,14 +191,29 @@ function buildTokenRequest(
 }
 
 /**
+ * Build a curl command string for the token request (for display purposes).
+ */
+export function buildTokenCurlCommand(
+  tokenEndpoint: string,
+  client: ClientConfig,
+  params: Record<string, string | undefined>,
+): string {
+  const { headers, body } = buildTokenRequest(client, params);
+  const headerLines = Object.entries(headers)
+    .map(([k, v]) => `  -H '${k}: ${v}'`)
+    .join(" \\\n");
+  return `curl -X POST '${tokenEndpoint}' \\\n${headerLines} \\\n  -d '${body}'`;
+}
+
+/**
  * Send a pre-built token request through the server proxy.
  * Server only forwards; all auth assembly is done client-side.
  */
 async function proxyTokenRequest(
   tokenEndpoint: string,
   client: ClientConfig,
-  params: Record<string, string | undefined>
-): Promise<TokenResponseData | TokenErrorData> {
+  params: Record<string, string | undefined>,
+): Promise<TokenResponse | TokenErrorResponse> {
   try {
     const { headers, body } = buildTokenRequest(client, params);
     const response = await fetch("/api/token-proxy", {
@@ -176,11 +221,11 @@ async function proxyTokenRequest(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tokenEndpoint, headers, body }),
     });
-    const data = await response.json() as Record<string, unknown>;
+    const data = (await response.json()) as Record<string, unknown>;
     if (!response.ok || data["error"]) {
-      return data as unknown as TokenErrorData;
+      return data as unknown as TokenErrorResponse;
     }
-    return data as unknown as TokenResponseData;
+    return data as unknown as TokenResponse;
   } catch (error) {
     return {
       error: "network_error",
@@ -197,8 +242,8 @@ export async function exchangeCodeForToken(
   client: ClientConfig,
   code: string,
   redirectUri: string,
-  codeVerifier?: string
-): Promise<TokenResponseData | TokenErrorData> {
+  codeVerifier?: string,
+): Promise<TokenResponse | TokenErrorResponse> {
   return proxyTokenRequest(tokenEndpoint, client, {
     grant_type: "authorization_code",
     code,
@@ -214,8 +259,8 @@ export async function requestClientCredentialsToken(
   tokenEndpoint: string,
   client: ClientConfig,
   scope?: string,
-  resource?: string | string[]
-): Promise<TokenResponseData | TokenErrorData> {
+  resource?: string | string[],
+): Promise<TokenResponse | TokenErrorResponse> {
   return proxyTokenRequest(tokenEndpoint, client, {
     grant_type: "client_credentials",
     scope,
@@ -230,8 +275,8 @@ export async function refreshAccessToken(
   tokenEndpoint: string,
   client: ClientConfig,
   refreshToken: string,
-  scope?: string
-): Promise<TokenResponseData | TokenErrorData> {
+  scope?: string,
+): Promise<TokenResponse | TokenErrorResponse> {
   return proxyTokenRequest(tokenEndpoint, client, {
     grant_type: "refresh_token",
     refresh_token: refreshToken,

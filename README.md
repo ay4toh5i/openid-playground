@@ -5,11 +5,13 @@ A comprehensive OAuth 2.0 and OpenID Connect testing playground built with HonoX
 ## Features
 
 ### Supported Flows
+
 - **Authorization Code Flow** with PKCE
 - **Client Credentials Flow**
 - **Refresh Token Flow**
 
 ### Key Capabilities
+
 - 🔐 Step-by-step flow execution with interactive timeline
 - 🔍 JWT inspection with signature verification
 - 💾 Client configuration management with LocalStorage
@@ -26,17 +28,20 @@ A comprehensive OAuth 2.0 and OpenID Connect testing playground built with HonoX
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js 18+
 - npm or pnpm
 
 ### Installation
 
 1. Install dependencies
+
 ```bash
 npm install
 ```
 
 2. Start development server
+
 ```bash
 npm run dev
 ```
@@ -62,6 +67,7 @@ The app will automatically fetch the provider's metadata from `{issuer}/.well-kn
 #### 2. Configure OAuth Provider
 
 Register the redirect URI in your OAuth provider:
+
 ```
 http://localhost:5174/callback
 ```
@@ -125,6 +131,7 @@ The inspector panel provides detailed token analysis:
 ### Copy to Clipboard
 
 Copy buttons are available for:
+
 - Authorization URLs
 - Authorization codes
 - Tokens
