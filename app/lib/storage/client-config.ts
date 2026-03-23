@@ -1,4 +1,7 @@
-// Re-export types from oidc.ts (we'll need to make them exportable)
+import type { OIDCProviderMetadata } from "../oidc";
+
+export type { OIDCProviderMetadata };
+
 export interface ClientConfig {
   id: string;
   name: string;
@@ -16,28 +19,9 @@ export interface ClientConfig {
   updatedAt: string;
 }
 
-// Simplified metadata type for storage
-export interface OIDCProviderMetadata {
-  issuer: string;
-  authorization_endpoint: string;
-  token_endpoint?: string;
-  userinfo_endpoint?: string;
-  jwks_uri: string;
-  scopes_supported?: string[];
-  response_types_supported: string[];
-  grant_types_supported?: string[];
-  token_endpoint_auth_methods_supported?: string[];
-}
-
 const STORAGE_KEY = "oidc_playground_clients";
 
-/**
- * Client configuration storage operations
- */
 export class ClientConfigStorage {
-  /**
-   * Get all saved client configurations
-   */
   static getAll(): ClientConfig[] {
     if (typeof window === "undefined") {
       return [];
@@ -55,17 +39,11 @@ export class ClientConfigStorage {
     }
   }
 
-  /**
-   * Get a specific client configuration by ID
-   */
   static getById(id: string): ClientConfig | null {
     const clients = this.getAll();
     return clients.find((client) => client.id === id) || null;
   }
 
-  /**
-   * Save a new client configuration or update existing one
-   */
   static save(
     client: Omit<ClientConfig, "id" | "createdAt" | "updatedAt"> | ClientConfig,
   ): ClientConfig {
@@ -110,9 +88,6 @@ export class ClientConfigStorage {
     }
   }
 
-  /**
-   * Delete a client configuration
-   */
   static delete(id: string): boolean {
     if (typeof window === "undefined") {
       return false;
@@ -134,19 +109,11 @@ export class ClientConfigStorage {
     }
   }
 
-  /**
-   * Export all client configurations as JSON
-   */
   static export(): string {
     const clients = this.getAll();
     return JSON.stringify(clients, null, 2);
   }
 
-  /**
-   * Import client configurations from JSON
-   * @param json JSON string containing client configurations
-   * @param mode 'merge' to keep existing configs, 'replace' to replace all
-   */
   static import(json: string, mode: "merge" | "replace" = "merge"): number {
     if (typeof window === "undefined") {
       throw new Error("LocalStorage not available");
@@ -180,9 +147,6 @@ export class ClientConfigStorage {
     }
   }
 
-  /**
-   * Clear all client configurations
-   */
   static clear(): void {
     if (typeof window === "undefined") {
       return;
@@ -196,9 +160,6 @@ export class ClientConfigStorage {
   }
 }
 
-/**
- * Fetch provider metadata from .well-known/openid-configuration
- */
 export async function fetchProviderMetadata(issuer: string): Promise<OIDCProviderMetadata> {
   // Ensure issuer doesn't have trailing slash
   const normalizedIssuer = issuer.replace(/\/$/, "");

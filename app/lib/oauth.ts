@@ -104,31 +104,26 @@ export async function buildAuthorizationUrl(
 /**
  * Open authorization popup and wait for callback
  */
-export async function startAuthorizationRequest(
-  authorizationUrl: string,
-): Promise<AuthorizationResponse> {
+export function openAuthorizationPopup(authorizationUrl: string): Window | null {
+  const width = 500;
+  const height = 700;
+  const left = window.screen.width / 2 - width / 2;
+  const top = window.screen.height / 2 - height / 2;
+  return window.open(
+    authorizationUrl,
+    "oauth_authorization",
+    `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`,
+  );
+}
+
+export function waitForAuthorizationCallback(popup: Window): Promise<AuthorizationResponse> {
   return new Promise((resolve, reject) => {
-    const width = 500;
-    const height = 700;
-    const left = window.screen.width / 2 - width / 2;
-    const top = window.screen.height / 2 - height / 2;
-
-    const popup = window.open(
-      authorizationUrl,
-      "oauth_authorization",
-      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`,
-    );
-
-    if (!popup) {
-      reject(new Error("Popup was blocked. Please allow popups for this site."));
-      return;
-    }
-
     const messageHandler = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) {
         return;
       }
       if (event.data && event.data.type === "oauth_callback") {
+        clearInterval(checkClosed);
         window.removeEventListener("message", messageHandler);
         popup.close();
         const callbackData: AuthorizationResponse = {

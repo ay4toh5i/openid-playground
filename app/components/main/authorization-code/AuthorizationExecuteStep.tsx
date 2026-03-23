@@ -4,7 +4,8 @@ import { useMutation } from "@tanstack/react-query";
 import { IconAlertCircle } from "@tabler/icons-react";
 import {
   buildAuthorizationUrl,
-  startAuthorizationRequest,
+  openAuthorizationPopup,
+  waitForAuthorizationCallback,
 } from "../../../lib/oauth";
 import { CopyButton } from "../../common/CopyButton";
 import { CodeBlock } from "../../common/CodeBlock";
@@ -41,8 +42,8 @@ export function AuthorizationExecuteStep({
   }, [client, metadata, authRequest, redirectUri]);
 
   const mutation = useMutation({
-    mutationFn: async () => {
-      const callback = await startAuthorizationRequest(authUrl);
+    mutationFn: async (popup: Window) => {
+      const callback = await waitForAuthorizationCallback(popup);
       if (callback.state !== authRequest?.state) {
         throw new Error("State mismatch - possible CSRF attack");
       }
@@ -52,6 +53,15 @@ export function AuthorizationExecuteStep({
       onCallbackReceived(callback);
     },
   });
+
+  const handleExecute = () => {
+    const popup = openAuthorizationPopup(authUrl);
+    if (!popup) {
+      mutation.reset();
+      return;
+    }
+    mutation.mutate(popup);
+  };
 
   if (!client || !metadata?.authorization_endpoint || !authRequest) {
     return (
@@ -84,7 +94,7 @@ export function AuthorizationExecuteStep({
           </Group>
           <CodeBlock code={formatAuthUrl(authUrl)} lang="text" />
         </div>
-        <Button onClick={() => mutation.mutate()} loading={mutation.isPending}>
+        <Button onClick={handleExecute} loading={mutation.isPending}>
           Open Authorization Page
         </Button>
         {mutation.isError && (

@@ -17,12 +17,12 @@ import type {
   TokenResponse,
 } from "../lib/oidc";
 import { PlaygroundLayout } from "../components/layout/PlaygroundLayout";
-import { ClientSelectionStep } from "../components/main/steps/ClientSelectionStep";
-import { AuthorizationRequestStep } from "../components/main/steps/AuthorizationRequestStep";
-import { AuthorizationExecuteStep } from "../components/main/steps/AuthorizationExecuteStep";
-import { CallbackReceivedStep } from "../components/main/steps/CallbackReceivedStep";
-import { TokenExchangeStep } from "../components/main/steps/TokenExchangeStep";
-import { TokenResponseStep } from "../components/main/steps/TokenResponseStep";
+import { ClientSelectionStep } from "../components/main/shared/ClientSelectionStep";
+import { AuthorizationRequestStep } from "../components/main/authorization-code/AuthorizationRequestStep";
+import { AuthorizationExecuteStep } from "../components/main/authorization-code/AuthorizationExecuteStep";
+import { CallbackReceivedStep } from "../components/main/authorization-code/CallbackReceivedStep";
+import { TokenExchangeStep } from "../components/main/authorization-code/TokenExchangeStep";
+import { TokenResponseStep } from "../components/main/shared/TokenResponseStep";
 
 const colorSchemeManager = localStorageColorSchemeManager({
   key: "oidc-playground-color-scheme",
@@ -136,7 +136,6 @@ function reducer(state: AuthCodeState, action: AuthCodeAction): AuthCodeState {
         ...state,
         client: action.client,
         metadata: action.metadata,
-        authRequest: null,
         callback: null,
         tokenResponse: null,
       };

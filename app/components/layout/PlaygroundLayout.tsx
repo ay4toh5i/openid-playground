@@ -1,8 +1,8 @@
 import { Grid, useMantineColorScheme } from "@mantine/core";
 import type { FlowType, TokenResponse, AuthorizationRequestConfig } from "../../lib/oidc";
 import type { OIDCProviderMetadata } from "../../lib/storage/client-config";
-import { IconsPanel } from "../icons/IconsPanel";
-import { FlowSelector } from "../flows/FlowSelector";
+import { Toolbar } from "../toolbar/Toolbar";
+import { Sidebar } from "../sidebar/Sidebar";
 import { InspectorPanel } from "../inspector/InspectorPanel";
 import type { ReactNode } from "react";
 
@@ -38,7 +38,7 @@ export function PlaygroundLayout({
             overflowY: "auto",
           }}
         >
-          <IconsPanel />
+          <Toolbar />
         </Grid.Col>
 
         {/* Flows Column - ~200px */}
@@ -52,7 +52,7 @@ export function PlaygroundLayout({
             overflowY: "auto",
           }}
         >
-          <FlowSelector currentFlow={currentFlow} />
+          <Sidebar currentFlow={currentFlow} />
         </Grid.Col>
 
         {/* Main Column - Flexible */}

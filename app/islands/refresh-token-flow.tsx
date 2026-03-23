@@ -11,9 +11,9 @@ import {
 import type { ClientConfig, OIDCProviderMetadata } from "../lib/storage/client-config";
 import type { TokenResponse } from "../lib/oidc";
 import { PlaygroundLayout } from "../components/layout/PlaygroundLayout";
-import { ClientSelectionStep } from "../components/main/steps/ClientSelectionStep";
-import { RefreshTokenStep } from "../components/main/steps/RefreshTokenStep";
-import { TokenResponseStep } from "../components/main/steps/TokenResponseStep";
+import { ClientSelectionStep } from "../components/main/shared/ClientSelectionStep";
+import { RefreshTokenStep } from "../components/main/refresh-token/RefreshTokenStep";
+import { TokenResponseStep } from "../components/main/shared/TokenResponseStep";
 
 const queryClient = new QueryClient();
 

@@ -10,7 +10,7 @@ import { useState } from "react";
 import { ClientConfigStorage } from "../../lib/storage/client-config";
 import ClientConfigManager from "../../islands/client-config-manager";
 
-export function IconsPanel() {
+export function Toolbar() {
   const [settingsOpened, setSettingsOpened] = useState(false);
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
 

@@ -46,7 +46,7 @@ function FlowCard({ href, title, description, isActive, comingSoon }: FlowCardPr
   );
 }
 
-export function FlowSelector({ currentFlow }: { currentFlow: FlowType | null }) {
+export function Sidebar({ currentFlow }: { currentFlow: FlowType | null }) {
   return (
     <Stack gap="sm">
       <Text size="xs" fw={600} c="dimmed" tt="uppercase">
