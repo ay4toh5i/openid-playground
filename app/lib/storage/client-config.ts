@@ -13,7 +13,16 @@ export interface ClientConfig {
     | "client_secret_post"
     | "private_key_jwt";
   clientSecret?: string;
-  privateKey?: string;
+  /** EC P-256 private key JWK (JSON string) for private_key_jwt ES256 authentication. */
+  privateKeyJwk?: string;
+  /** EC P-256 public key JWK (JSON string) for private_key_jwt — export for JWKS endpoint. */
+  privateKeyPublicJwk?: string;
+  /** Enable DPoP (Demonstrating Proof of Possession) for token requests. */
+  dpop?: boolean;
+  /** EC P-256 private key JWK (JSON string) for DPoP proof generation. */
+  dpopPrivateKeyJwk?: string;
+  /** EC P-256 public key JWK (JSON string) for DPoP — embedded in proof header. */
+  dpopPublicKeyJwk?: string;
   metadata?: OIDCProviderMetadata;
   createdAt: string;
   updatedAt: string;

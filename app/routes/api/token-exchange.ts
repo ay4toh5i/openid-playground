@@ -16,39 +16,36 @@ interface TokenExchangeRequest {
   tokenEndpoint: string;
   client: ClientConfig;
   tokenRequest: TokenRequest;
+  dpopProof?: string;
 }
 
 const app = new Hono();
 
 /**
- * Generate client assertion JWT for private_key_jwt authentication
- * Uses jose library for cross-platform compatibility
+ * Generate client assertion JWT for private_key_jwt authentication.
+ * Prefers EC P-256 / ES256 via JWK; falls back to RS256 via PEM for backward compatibility.
  */
 async function generateClientAssertion(
   clientId: string,
   tokenEndpoint: string,
-  privateKeyPem: string,
+  privateKeyJwk: string,
 ): Promise<string> {
   try {
-    // Use jose's importPKCS8 for better compatibility
-    const { importPKCS8, SignJWT: JoseSignJWT } = await import("jose");
+    const { importJWK, SignJWT: JoseSignJWT } = await import("jose");
+    type JWK = Parameters<typeof importJWK>[0];
 
-    // Import the private key
-    const privateKey = await importPKCS8(privateKeyPem, "RS256");
+    const privateKey = await importJWK(JSON.parse(privateKeyJwk) as JWK, "ES256");
 
-    // Create JWT assertion
-    const jwt = await new JoseSignJWT({
+    return new JoseSignJWT({
       iss: clientId,
       sub: clientId,
       aud: tokenEndpoint,
       jti: crypto.randomUUID(),
     })
-      .setProtectedHeader({ alg: "RS256" })
+      .setProtectedHeader({ alg: "ES256" })
       .setIssuedAt()
       .setExpirationTime("5m")
       .sign(privateKey);
-
-    return jwt;
   } catch (error) {
     console.error("Failed to generate client assertion:", error);
     throw new Error(
@@ -60,7 +57,7 @@ async function generateClientAssertion(
 app.post("/", async (c) => {
   try {
     const body = await c.req.json<TokenExchangeRequest>();
-    const { tokenEndpoint, client, tokenRequest } = body;
+    const { tokenEndpoint, client, tokenRequest, dpopProof } = body;
 
     if (!tokenEndpoint || !client || !tokenRequest) {
       return c.json(
@@ -125,7 +122,7 @@ app.post("/", async (c) => {
       }
 
       case "private_key_jwt": {
-        if (!client.privateKey) {
+        if (!client.privateKeyJwk) {
           return c.json(
             {
               error: "invalid_client",
@@ -138,7 +135,7 @@ app.post("/", async (c) => {
           const assertion = await generateClientAssertion(
             client.clientId,
             tokenEndpoint,
-            client.privateKey,
+            client.privateKeyJwk,
           );
           formBody.append("client_assertion", assertion);
           formBody.append(
@@ -170,6 +167,11 @@ app.post("/", async (c) => {
           },
           400,
         );
+    }
+
+    // Add DPoP proof header if provided
+    if (dpopProof) {
+      headers.set("DPoP", dpopProof);
     }
 
     // Make the token request

@@ -1,4 +1,5 @@
 import { generatePKCEPair, generateCodeChallenge } from "../lib/crypto/pkce";
+import { generateDPoPProof } from "../lib/crypto/dpop";
 import type {
   AuthorizationRequestConfig,
   AuthorizationResponse,
@@ -201,16 +202,53 @@ export function buildTokenCurlCommand(
 }
 
 /**
- * Send a pre-built token request through the server proxy.
- * Server only forwards; all auth assembly is done client-side.
+ * Send a token request.
+ * - private_key_jwt: routed through /api/token-exchange (server generates JWT assertion)
+ * - all others: routed through /api/token-proxy; DPoP proof added client-side if enabled
  */
-async function proxyTokenRequest(
+async function sendTokenRequest(
   tokenEndpoint: string,
   client: ClientConfig,
   params: Record<string, string | undefined>,
 ): Promise<TokenResponse | TokenErrorResponse> {
   try {
+    if (client.clientAuthenticationMethod === "private_key_jwt") {
+      let dpopProof: string | undefined;
+      if (client.dpop && client.dpopPrivateKeyJwk && client.dpopPublicKeyJwk) {
+        dpopProof = await generateDPoPProof(
+          JSON.parse(client.dpopPrivateKeyJwk) as JsonWebKey,
+          JSON.parse(client.dpopPublicKeyJwk) as JsonWebKey,
+          "POST",
+          tokenEndpoint,
+        );
+      }
+      const tokenRequest: Record<string, string | string[] | undefined> = {};
+      for (const [k, v] of Object.entries(params)) {
+        if (v !== undefined && v !== "") tokenRequest[k] = v;
+      }
+      const response = await fetch("/api/token-exchange", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tokenEndpoint, client, tokenRequest, dpopProof }),
+      });
+      const data = (await response.json()) as Record<string, unknown>;
+      if (!response.ok || data["error"]) {
+        return data as unknown as TokenErrorResponse;
+      }
+      return data as unknown as TokenResponse;
+    }
+
+    // All other auth methods: build request client-side and proxy
     const { headers, body } = buildTokenRequest(client, params);
+    if (client.dpop && client.dpopPrivateKeyJwk && client.dpopPublicKeyJwk) {
+      const dpopProof = await generateDPoPProof(
+        JSON.parse(client.dpopPrivateKeyJwk) as JsonWebKey,
+        JSON.parse(client.dpopPublicKeyJwk) as JsonWebKey,
+        "POST",
+        tokenEndpoint,
+      );
+      headers["DPoP"] = dpopProof;
+    }
     const response = await fetch("/api/token-proxy", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -239,7 +277,7 @@ export async function exchangeCodeForToken(
   redirectUri: string,
   codeVerifier?: string,
 ): Promise<TokenResponse | TokenErrorResponse> {
-  return proxyTokenRequest(tokenEndpoint, client, {
+  return sendTokenRequest(tokenEndpoint, client, {
     grant_type: "authorization_code",
     code,
     redirect_uri: redirectUri,
@@ -256,7 +294,7 @@ export async function requestClientCredentialsToken(
   scope?: string,
   resource?: string | string[],
 ): Promise<TokenResponse | TokenErrorResponse> {
-  return proxyTokenRequest(tokenEndpoint, client, {
+  return sendTokenRequest(tokenEndpoint, client, {
     grant_type: "client_credentials",
     scope,
     resource: Array.isArray(resource) ? resource.join(" ") : resource,
@@ -272,9 +310,31 @@ export async function refreshAccessToken(
   refreshToken: string,
   scope?: string,
 ): Promise<TokenResponse | TokenErrorResponse> {
-  return proxyTokenRequest(tokenEndpoint, client, {
+  return sendTokenRequest(tokenEndpoint, client, {
     grant_type: "refresh_token",
     refresh_token: refreshToken,
     scope,
   });
+}
+
+/**
+ * Build end-session (logout) URL per RP-Initiated Logout 1.0 spec.
+ */
+export function buildEndSessionUrl(
+  endSessionEndpoint: string,
+  params: {
+    id_token_hint?: string;
+    logout_hint?: string;
+    client_id?: string;
+    post_logout_redirect_uri?: string;
+    state?: string;
+    ui_locales?: string;
+  },
+): string {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value) query.set(key, value);
+  }
+  const qs = query.toString();
+  return qs ? `${endSessionEndpoint}?${qs}` : endSessionEndpoint;
 }

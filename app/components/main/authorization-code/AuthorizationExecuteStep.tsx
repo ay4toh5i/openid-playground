@@ -30,14 +30,18 @@ export function AuthorizationExecuteStep({
   const [authUrl, setAuthUrl] = useState("");
 
   useEffect(() => {
-    if (!client || !metadata?.authorization_endpoint || !authRequest) { return; }
+    if (!client || !metadata?.authorization_endpoint || !authRequest) {
+      return;
+    }
     void (async () => {
-      setAuthUrl(await buildAuthorizationUrl(
-        metadata.authorization_endpoint,
-        client.clientId,
-        redirectUri,
-        authRequest,
-      ));
+      setAuthUrl(
+        await buildAuthorizationUrl(
+          metadata.authorization_endpoint,
+          client.clientId,
+          redirectUri,
+          authRequest,
+        ),
+      );
     })();
   }, [client, metadata, authRequest, redirectUri]);
 

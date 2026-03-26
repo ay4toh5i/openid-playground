@@ -74,6 +74,13 @@ export function Sidebar({ currentFlow }: { currentFlow: FlowType | null }) {
         description="Obtain new access token using refresh token"
       />
 
+      <FlowCard
+        href="/flows/end-session"
+        isActive={currentFlow === "end_session"}
+        title="RP-Initiated Logout"
+        description="Logout via end_session_endpoint"
+      />
+
       <FlowCard title="Device Code" description="Flow for devices with limited input" comingSoon />
     </Stack>
   );

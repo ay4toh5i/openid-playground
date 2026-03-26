@@ -57,7 +57,9 @@ export function RefreshTokenStep({
   }
 
   const onSubmit = (data: RefreshTokenFormData) => {
-    if (!data.refreshToken.trim()) { return; }
+    if (!data.refreshToken.trim()) {
+      return;
+    }
     mutation.mutate(data);
   };
 

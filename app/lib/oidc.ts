@@ -206,6 +206,12 @@ export type OIDCProviderMetadata = {
    * the OpenID Provider's terms of service.
    */
   op_tos_uri?: string;
+
+  /**
+   * OPTIONAL. URL at the OP to which an RP can perform a redirect to request that the End-User be logged out
+   * at the OP. Per OpenID Connect RP-Initiated Logout 1.0.
+   */
+  end_session_endpoint?: string;
 };
 
 export type ClientAuthenticationMethod =
@@ -230,7 +236,11 @@ export type Client =
       privateKey: string;
     };
 
-export type FlowType = "authorization_code" | "client_credentials" | "refresh_token";
+export type FlowType =
+  | "authorization_code"
+  | "client_credentials"
+  | "refresh_token"
+  | "end_session";
 
 export type AuthorizationResponse = {
   code?: string;
@@ -357,7 +367,6 @@ export type AuthorizationRequest = {
    * OPTIONAL. Custom parameters to include in the authorization request.
    */
   customParams?: Record<string, string>;
-
 };
 
 /**

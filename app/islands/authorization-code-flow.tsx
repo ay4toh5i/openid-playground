@@ -11,11 +11,7 @@ import {
   Box,
 } from "@mantine/core";
 import type { ClientConfig, OIDCProviderMetadata } from "../lib/storage/client-config";
-import type {
-  AuthorizationRequestConfig,
-  AuthorizationResponse,
-  TokenResponse,
-} from "../lib/oidc";
+import type { AuthorizationRequestConfig, AuthorizationResponse, TokenResponse } from "../lib/oidc";
 import { PlaygroundLayout } from "../components/layout/PlaygroundLayout";
 import { ClientSelectionStep } from "../components/main/shared/ClientSelectionStep";
 import { AuthorizationRequestStep } from "../components/main/authorization-code/AuthorizationRequestStep";
@@ -214,9 +210,7 @@ export default function AuthorizationCodeFlow() {
             Configure authorization parameters
           </Text>
           <AuthorizationRequestStep
-            onRequestConfigured={(request) =>
-              dispatch({ type: "REQUEST_CONFIGURED", request })
-            }
+            onRequestConfigured={(request) => dispatch({ type: "REQUEST_CONFIGURED", request })}
           />
         </Timeline.Item>
 
@@ -276,24 +270,24 @@ export default function AuthorizationCodeFlow() {
 
   return (
     <QueryClientProvider client={queryClient}>
-    <MantineProvider
-      theme={theme}
-      colorSchemeManager={colorSchemeManager}
-      defaultColorScheme="light"
-    >
-      {mounted ? (
-        <PlaygroundLayout
-          currentFlow="authorization_code"
-          tokenResponse={state.tokenResponse}
-          providerMetadata={state.metadata}
-          authRequest={state.authRequest}
-        >
-          {content}
-        </PlaygroundLayout>
-      ) : (
-        <div style={{ minHeight: "100vh" }} />
-      )}
-    </MantineProvider>
+      <MantineProvider
+        theme={theme}
+        colorSchemeManager={colorSchemeManager}
+        defaultColorScheme="light"
+      >
+        {mounted ? (
+          <PlaygroundLayout
+            currentFlow="authorization_code"
+            tokenResponse={state.tokenResponse}
+            providerMetadata={state.metadata}
+            authRequest={state.authRequest}
+          >
+            {content}
+          </PlaygroundLayout>
+        ) : (
+          <div style={{ minHeight: "100vh" }} />
+        )}
+      </MantineProvider>
     </QueryClientProvider>
   );
 }
