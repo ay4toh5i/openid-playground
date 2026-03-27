@@ -170,12 +170,10 @@ export class ClientConfigStorage {
 }
 
 export async function fetchProviderMetadata(issuer: string): Promise<OIDCProviderMetadata> {
-  // Ensure issuer doesn't have trailing slash
-  const normalizedIssuer = issuer.replace(/\/$/, "");
-  const wellKnownUrl = `${normalizedIssuer}/.well-known/openid-configuration`;
-
   try {
-    const response = await fetch(wellKnownUrl);
+    const response = await fetch(
+      `/api/oidc-discovery?issuer=${encodeURIComponent(issuer.replace(/\/$/, ""))}`,
+    );
 
     if (!response.ok) {
       throw new Error(`Failed to fetch provider metadata: ${response.statusText}`);
