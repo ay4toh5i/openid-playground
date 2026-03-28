@@ -1,0 +1,10 @@
+@import "@mantine/core/styles.css";
+
+/* Custom border colors for dark mode */
+[data-mantine-color-scheme="dark"] {
+  --mantine-color-default-border: rgba(255, 255, 255, 0.1);
+}
+
+[data-mantine-color-scheme="light"] {
+  --mantine-color-default-border: rgba(0, 0, 0, 0.1);
+}
