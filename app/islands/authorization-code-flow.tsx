@@ -19,6 +19,7 @@ import { AuthorizationExecuteStep } from "../components/main/authorization-code/
 import { CallbackReceivedStep } from "../components/main/authorization-code/CallbackReceivedStep";
 import { TokenExchangeStep } from "../components/main/authorization-code/TokenExchangeStep";
 import { TokenResponseStep } from "../components/main/shared/TokenResponseStep";
+import { UserinfoStep } from "../components/main/authorization-code/UserinfoStep";
 
 const colorSchemeManager = localStorageColorSchemeManager({
   key: "oidc-playground-color-scheme",
@@ -108,6 +109,7 @@ type AuthCodeState = {
   authRequest: AuthorizationRequestConfig | null;
   callback: AuthorizationResponse | null;
   tokenResponse: TokenResponse | null;
+  userinfoResponse: Record<string, unknown> | null;
 };
 
 type AuthCodeAction =
@@ -115,6 +117,7 @@ type AuthCodeAction =
   | { type: "REQUEST_CONFIGURED"; request: AuthorizationRequestConfig }
   | { type: "CALLBACK_RECEIVED"; callback: AuthorizationResponse }
   | { type: "TOKEN_RECEIVED"; token: TokenResponse }
+  | { type: "USERINFO_RECEIVED"; claims: Record<string, unknown> }
   | { type: "RESET" };
 
 const initialState: AuthCodeState = {
@@ -123,6 +126,7 @@ const initialState: AuthCodeState = {
   authRequest: null,
   callback: null,
   tokenResponse: null,
+  userinfoResponse: null,
 };
 
 function reducer(state: AuthCodeState, action: AuthCodeAction): AuthCodeState {
@@ -149,7 +153,9 @@ function reducer(state: AuthCodeState, action: AuthCodeAction): AuthCodeState {
         tokenResponse: null,
       };
     case "TOKEN_RECEIVED":
-      return { ...state, tokenResponse: action.token };
+      return { ...state, tokenResponse: action.token, userinfoResponse: null };
+    case "USERINFO_RECEIVED":
+      return { ...state, userinfoResponse: action.claims };
     case "RESET":
       return initialState;
     default:
@@ -262,6 +268,19 @@ export default function AuthorizationCodeFlow() {
           <TokenResponseStep
             tokenResponse={state.tokenResponse}
             onReset={() => dispatch({ type: "RESET" })}
+          />
+        </Timeline.Item>
+
+        {/* Step 7: UserInfo */}
+        <Timeline.Item bullet={<NumberBullet n={5} />} title="UserInfo">
+          <Text size="sm" c="dimmed">
+            Fetch claims from the UserInfo endpoint
+          </Text>
+          <UserinfoStep
+            client={state.client}
+            userinfoEndpoint={state.metadata?.userinfo_endpoint}
+            tokenResponse={state.tokenResponse}
+            onUserinfoReceived={(claims) => dispatch({ type: "USERINFO_RECEIVED", claims })}
           />
         </Timeline.Item>
       </Timeline>

@@ -318,6 +318,47 @@ export async function refreshAccessToken(
 }
 
 /**
+ * Build a curl command string for the UserInfo request (for display purposes).
+ */
+export function buildUserinfoCurlCommand(
+  userinfoEndpoint: string,
+  accessToken: string,
+  dpop: boolean,
+): string {
+  const lines = [`curl -X GET '${userinfoEndpoint}'`, `  -H 'Authorization: Bearer ${accessToken}'`];
+  if (dpop) {
+    lines.push(`  -H 'DPoP: <proof>'`);
+  }
+  return lines.join(" \\\n");
+}
+
+/**
+ * Call the UserInfo endpoint with the given access token.
+ * Routes through the server to avoid CORS. Generates a DPoP proof if the client has DPoP enabled.
+ */
+export async function callUserinfo(
+  userinfoEndpoint: string,
+  accessToken: string,
+  client: ClientConfig,
+): Promise<Record<string, unknown>> {
+  let dpopProof: string | undefined;
+  if (client.dpop && client.dpopPrivateKeyJwk && client.dpopPublicKeyJwk) {
+    dpopProof = await generateDPoPProof(
+      JSON.parse(client.dpopPrivateKeyJwk) as JsonWebKey,
+      JSON.parse(client.dpopPublicKeyJwk) as JsonWebKey,
+      "GET",
+      userinfoEndpoint,
+    );
+  }
+  const response = await fetch("/api/userinfo", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userinfoEndpoint, accessToken, dpopProof }),
+  });
+  return response.json() as Promise<Record<string, unknown>>;
+}
+
+/**
  * Build end-session (logout) URL per RP-Initiated Logout 1.0 spec.
  */
 export function buildEndSessionUrl(
