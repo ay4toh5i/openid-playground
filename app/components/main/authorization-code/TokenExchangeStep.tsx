@@ -25,7 +25,14 @@ export function TokenExchangeStep({
   codeVerifier,
   onTokenReceived,
 }: TokenExchangeStepProps) {
-  const [autoExecute, setAutoExecute] = useState(false);
+  const [autoExecute, setAutoExecute] = useState(
+    () => localStorage.getItem("oidc-playground-token-exchange-auto-execute") === "true",
+  );
+
+  const handleAutoExecuteChange = (value: boolean) => {
+    setAutoExecute(value);
+    localStorage.setItem("oidc-playground-token-exchange-auto-execute", String(value));
+  };
   const executedRef = useRef(false);
 
   const mutation = useMutation({
@@ -79,7 +86,7 @@ export function TokenExchangeStep({
           <Switch
             label="Auto-execute when code arrives"
             checked={autoExecute}
-            onChange={(e) => setAutoExecute(e.currentTarget.checked)}
+            onChange={(e) => handleAutoExecuteChange(e.currentTarget.checked)}
           />
           <Text size="sm" c="dimmed">
             Waiting for authorization code...
@@ -102,7 +109,7 @@ export function TokenExchangeStep({
         <Switch
           label="Auto-execute when code arrives"
           checked={autoExecute}
-          onChange={(e) => setAutoExecute(e.currentTarget.checked)}
+          onChange={(e) => handleAutoExecuteChange(e.currentTarget.checked)}
         />
         <Text size="sm" c="dimmed">
           Authorization code received. Click to exchange for tokens.
