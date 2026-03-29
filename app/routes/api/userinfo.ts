@@ -14,7 +14,10 @@ app.post("/", async (c) => {
 
   if (!userinfoEndpoint || !accessToken) {
     return c.json(
-      { error: "invalid_request", error_description: "userinfoEndpoint and accessToken are required" },
+      {
+        error: "invalid_request",
+        error_description: "userinfoEndpoint and accessToken are required",
+      },
       400,
     );
   }

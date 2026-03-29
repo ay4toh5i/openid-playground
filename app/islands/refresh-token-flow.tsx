@@ -1,13 +1,6 @@
-import { useReducer, useState, useEffect } from "react";
+import { useReducer, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  MantineProvider,
-  localStorageColorSchemeManager,
-  createTheme,
-  Timeline,
-  Text,
-  Box,
-} from "@mantine/core";
+import { MantineProvider, createTheme, Timeline, Text, Box } from "@mantine/core";
 import type { ClientConfig, OIDCProviderMetadata } from "../lib/storage/client-config";
 import type { TokenResponse } from "../lib/oidc";
 import { PlaygroundLayout } from "../components/layout/PlaygroundLayout";
@@ -16,10 +9,6 @@ import { RefreshTokenStep } from "../components/main/refresh-token/RefreshTokenS
 import { TokenResponseStep } from "../components/main/shared/TokenResponseStep";
 
 const queryClient = new QueryClient();
-
-const colorSchemeManager = localStorageColorSchemeManager({
-  key: "oidc-playground-color-scheme",
-});
 
 const theme = createTheme({
   colors: {
@@ -133,10 +122,7 @@ function reducer(state: RefreshTokenState, action: RefreshTokenAction): RefreshT
 export default function RefreshTokenFlow() {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  const [mounted, setMounted] = useState(false);
-
   useEffect(() => {
-    setMounted(true);
     localStorage.setItem("oidc-playground-last-flow", "refresh-token");
   }, []);
 
@@ -187,23 +173,15 @@ export default function RefreshTokenFlow() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <MantineProvider
-        theme={theme}
-        colorSchemeManager={colorSchemeManager}
-        defaultColorScheme="light"
-      >
-        {mounted ? (
-          <PlaygroundLayout
-            currentFlow="refresh_token"
-            tokenResponse={state.tokenResponse}
-            providerMetadata={state.metadata}
-            authRequest={null}
-          >
-            {content}
-          </PlaygroundLayout>
-        ) : (
-          <div style={{ minHeight: "100vh" }} />
-        )}
+      <MantineProvider theme={theme} defaultColorScheme="auto">
+        <PlaygroundLayout
+          currentFlow="refresh_token"
+          tokenResponse={state.tokenResponse}
+          providerMetadata={state.metadata}
+          authRequest={null}
+        >
+          {content}
+        </PlaygroundLayout>
       </MantineProvider>
     </QueryClientProvider>
   );

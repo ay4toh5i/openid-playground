@@ -76,7 +76,7 @@ export function UserinfoStep({
   const curlCommand = buildUserinfoCurlCommand(
     userinfoEndpoint,
     tokenResponse.access_token,
-    !!(client?.dpop),
+    !!client?.dpop,
   );
 
   return (

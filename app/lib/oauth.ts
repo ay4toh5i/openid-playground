@@ -325,7 +325,10 @@ export function buildUserinfoCurlCommand(
   accessToken: string,
   dpop: boolean,
 ): string {
-  const lines = [`curl -X GET '${userinfoEndpoint}'`, `  -H 'Authorization: Bearer ${accessToken}'`];
+  const lines = [
+    `curl -X GET '${userinfoEndpoint}'`,
+    `  -H 'Authorization: Bearer ${accessToken}'`,
+  ];
   if (dpop) {
     lines.push(`  -H 'DPoP: <proof>'`);
   }

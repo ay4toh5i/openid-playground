@@ -30,7 +30,11 @@ export function TokenExchangeStep({
 
   // Restore persisted value client-side only (localStorage is unavailable during SSR)
   useEffect(() => {
-    setAutoExecute(Boolean(JSON.parse(localStorage.getItem("oidc-playground-token-exchange-auto-execute") ?? "false")));
+    setAutoExecute(
+      Boolean(
+        JSON.parse(localStorage.getItem("oidc-playground-token-exchange-auto-execute") ?? "false"),
+      ),
+    );
   }, []);
 
   const handleAutoExecuteChange = (value: boolean) => {
