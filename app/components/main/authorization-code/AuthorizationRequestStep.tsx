@@ -4,7 +4,7 @@ import {
   Stack,
   Select,
   NumberInput,
-  Textarea,
+  Input,
   Divider,
   Text,
   Accordion,
@@ -330,13 +330,14 @@ export function AuthorizationRequestStep({
                   placeholder="e.g., en-US fr"
                 />
 
-                <Textarea
-                  label="ID Token Hint"
-                  description="Previously issued ID Token"
-                  {...register("id_token_hint")}
-                  minRows={2}
-                  placeholder="Optional"
-                />
+                <Input.Wrapper label="ID Token Hint" description="Previously issued ID Token">
+                  <Input
+                    component="textarea"
+                    {...register("id_token_hint")}
+                    placeholder="Optional"
+                    rows={2}
+                  />
+                </Input.Wrapper>
 
                 <TextInput
                   label="Login Hint"

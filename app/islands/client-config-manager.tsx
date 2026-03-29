@@ -6,7 +6,7 @@ import {
   Button,
   TextInput,
   Select,
-  Textarea,
+  Input,
   Group,
   ActionIcon,
   Title,
@@ -321,10 +321,11 @@ export default function ClientConfigManager({ onClose: _onClose }: ClientConfigM
                           (register this at your provider's JWKS endpoint)
                         </Text>
                       </Text>
-                      <Textarea
+                      <Input
+                        component="textarea"
                         value={privateKeyPublicJwk}
                         readOnly
-                        minRows={4}
+                        rows={4}
                         styles={{ input: { fontFamily: "monospace", fontSize: "11px" } }}
                       />
                       <Group gap="xs">
@@ -396,10 +397,11 @@ export default function ClientConfigManager({ onClose: _onClose }: ClientConfigM
                       <Text size="sm" fw={500}>
                         DPoP Public Key JWK
                       </Text>
-                      <Textarea
+                      <Input
+                        component="textarea"
                         value={dpopPublicKeyJwk}
                         readOnly
-                        minRows={4}
+                        rows={4}
                         styles={{ input: { fontFamily: "monospace", fontSize: "11px" } }}
                       />
                       <Group gap="xs">

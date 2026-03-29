@@ -1,4 +1,4 @@
-import { Paper, TextInput, Textarea, Button, Stack, Text, Alert, Code } from "@mantine/core";
+import { Paper, TextInput, Input, Button, Stack, Text, Alert, Code } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
@@ -70,13 +70,17 @@ export function EndSessionStep({ client, metadata, onLogoutInitiated }: EndSessi
     <Paper p="md" mt="sm" withBorder>
       <form onSubmit={handleSubmit(onSubmit)}>
         <Stack gap="md">
-          <Textarea
+          <Input.Wrapper
             label="ID Token Hint"
-            {...register("id_token_hint")}
-            placeholder="Paste a previously issued ID token (recommended)"
             description="Helps the provider identify the session to terminate"
-            minRows={3}
-          />
+          >
+            <Input
+              component="textarea"
+              {...register("id_token_hint")}
+              placeholder="Paste a previously issued ID token (recommended)"
+              rows={3}
+            />
+          </Input.Wrapper>
 
           <TextInput
             label="Post-Logout Redirect URI"

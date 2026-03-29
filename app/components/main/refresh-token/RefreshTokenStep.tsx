@@ -1,4 +1,4 @@
-import { Paper, Textarea, TextInput, Button, Stack, Text, Alert } from "@mantine/core";
+import { Paper, Input, TextInput, Button, Stack, Text, Alert } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
 import { useForm } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
@@ -67,13 +67,14 @@ export function RefreshTokenStep({
     <Paper p="md" mt="sm" withBorder>
       <form onSubmit={handleSubmit(onSubmit)}>
         <Stack gap="md">
-          <Textarea
-            label="Refresh Token"
-            {...register("refreshToken")}
-            required
-            minRows={2}
-            placeholder="Enter your refresh token"
-          />
+          <Input.Wrapper label="Refresh Token" required>
+            <Input
+              component="textarea"
+              {...register("refreshToken")}
+              placeholder="Enter your refresh token"
+              rows={2}
+            />
+          </Input.Wrapper>
           <TextInput
             label="Scope (optional)"
             {...register("scope")}
